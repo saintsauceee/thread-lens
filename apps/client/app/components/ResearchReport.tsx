@@ -17,7 +17,6 @@ export default function ResearchReport({ report }: { report: ReportData }) {
       className="transition-all duration-700 ease-out"
       style={{ opacity: visible ? 1 : 0, transform: visible ? 'translateY(0)' : 'translateY(12px)' }}
     >
-      {/* Stats bar */}
       <div className="flex items-center gap-2 mb-5">
         {[
           `${report.agentCount} agents`,

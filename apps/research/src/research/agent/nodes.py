@@ -1,28 +1,67 @@
+import asyncio
 import json
 import re
 
 from langchain_google_genai import ChatGoogleGenerativeAI
-from langgraph.prebuilt import create_react_agent
+from langgraph.prebuilt import create_react_agent, ToolNode
 
+from .key_rotator import get_rotator
 from .prompts import EVALUATOR_SYSTEM, ORCHESTRATOR_SYSTEM, SUBAGENT_SYSTEM, SYNTHESIZER_SYSTEM
 from .state import ResearchState, ResearchTask, SubagentResult
 from .tools import get_mcp_client
 
-MODEL = "gemini-2.0-flash"
+MODEL = "gemini-3.1-flash-lite-preview"
 
 
-def _parse_json(text: str) -> dict | list:
+def _model() -> tuple[ChatGoogleGenerativeAI, str]:
+    """Get a model instance and its key using the next available API key."""
+    key = get_rotator().get_key()
+    return ChatGoogleGenerativeAI(model=MODEL, google_api_key=key), key
+
+
+def _is_rate_limit(e: Exception) -> bool:
+    s = str(e).upper()
+    return "429" in s or "QUOTA" in s or "RESOURCE_EXHAUSTED" in s
+
+
+async def _invoke(messages: list) -> object:
+    """Invoke the model with automatic key rotation and backoff on 429."""
+    rotator = get_rotator()
+    for attempt in range(len(rotator._keys) * 2 + 1):
+        try:
+            model, key = _model()
+            return await model.ainvoke(messages)
+        except Exception as e:
+            if _is_rate_limit(e):
+                rotator.mark_rate_limited(key)
+                if attempt >= len(rotator._keys):
+                    await asyncio.sleep(30)
+                continue
+            raise
+    raise RuntimeError("All API keys exhausted after retries")
+
+
+def _content_text(content) -> str:
+    if isinstance(content, list):
+        return "".join(
+            p.get("text", "") if isinstance(p, dict) else getattr(p, "text", str(p))
+            for p in content
+        )
+    return str(content)
+
+
+def _parse_json(content) -> dict | list:
+    text = _content_text(content)
     match = re.search(r"(\[.*\]|\{.*\})", text, re.DOTALL)
     return json.loads(match.group(1) if match else text)
 
 
 async def orchestrator_node(state: ResearchState) -> dict:
-    model = ChatGoogleGenerativeAI(model=MODEL)
-    response = await model.ainvoke(
+    response = await _invoke(
         [
             {"role": "system", "content": ORCHESTRATOR_SYSTEM},
             {"role": "user", "content": state["query"]},
-        ]
+        ],
     )
     tasks: list[ResearchTask] = _parse_json(response.content)
     return {"tasks": tasks, "round": state.get("round", 0) + 1}
@@ -30,27 +69,48 @@ async def orchestrator_node(state: ResearchState) -> dict:
 
 async def subagent_node(state: ResearchState) -> dict:
     task: ResearchTask = state["current_task"]
-    model = ChatGoogleGenerativeAI(model=MODEL)
+    user_msg = (
+        f"Research task: {task['topic']}\n"
+        f"Focus: {task['focus']}\n"
+        f"Suggested subreddits: {', '.join(task['subreddits']) or 'any relevant'}\n\n"
+        f"Original query: {state['query']}"
+    )
 
-    async with get_mcp_client() as client:
-        tools = client.get_tools()
-        agent = create_react_agent(model, tools, prompt=SUBAGENT_SYSTEM)
-        user_msg = (
-            f"Research task: {task['topic']}\n"
-            f"Focus: {task['focus']}\n"
-            f"Suggested subreddits: {', '.join(task['subreddits']) or 'any relevant'}\n\n"
-            f"Original query: {state['query']}"
-        )
-        result = await agent.ainvoke({"messages": [{"role": "user", "content": user_msg}]})
+    last_exc: Exception | None = None
+    rotator = get_rotator()
+    for attempt in range(6):
+        try:
+            model, key = _model()
+            client = get_mcp_client()
+            tools = await client.get_tools()
+            tool_node = ToolNode(tools, handle_tool_errors=True)
+            agent = create_react_agent(model, tool_node, prompt=SUBAGENT_SYSTEM)
+            result = await agent.ainvoke({"messages": [{"role": "user", "content": user_msg}]})
+            break
+        except Exception as e:
+            if _is_rate_limit(e):
+                last_exc = e
+                rotator.mark_rate_limited(key)
+                sleep_s = 15 if attempt < len(rotator._keys) else 30 * (attempt - len(rotator._keys) + 1)
+                await asyncio.sleep(sleep_s)
+                continue
+            raise
+    else:
+        raise last_exc  # type: ignore[misc]
 
     findings = result["messages"][-1].content
 
-    # Extract Reddit post URLs from tool calls
     sources: list[str] = []
     for msg in result["messages"]:
+        # URLs from get_post calls
         for tc in getattr(msg, "tool_calls", []):
-            if "post_id" in tc.get("args", {}):
-                sources.append(f"https://reddit.com/comments/{tc['args']['post_id']}")
+            args = tc.get("args", {}) if isinstance(tc, dict) else getattr(tc, "args", {})
+            if "post_id" in args:
+                sources.append(f"https://reddit.com/comments/{args['post_id']}")
+        # URLs embedded in tool result content (search_reddit returns url fields)
+        content = getattr(msg, "content", "")
+        if isinstance(content, str):
+            sources.extend(re.findall(r'https://reddit\.com/r/[^\s"\']+', content))
 
     return {
         "results": [
@@ -64,22 +124,20 @@ async def subagent_node(state: ResearchState) -> dict:
 
 
 async def evaluator_node(state: ResearchState) -> dict:
-    # Cap at 2 rounds
     if state.get("round", 1) >= 2:
         return {"gaps": []}
 
-    model = ChatGoogleGenerativeAI(model=MODEL)
     findings_summary = "\n\n".join(
         f"### {r['topic']}\n{r['findings'][:600]}" for r in state["results"]
     )
-    response = await model.ainvoke(
+    response = await _invoke(
         [
             {"role": "system", "content": EVALUATOR_SYSTEM},
             {
                 "role": "user",
                 "content": f"Query: {state['query']}\n\nFindings:\n{findings_summary}",
             },
-        ]
+        ],
     )
     evaluation = _parse_json(response.content)
     gaps = [] if evaluation.get("sufficient") else evaluation.get("gaps", [])
@@ -87,23 +145,22 @@ async def evaluator_node(state: ResearchState) -> dict:
 
 
 async def synthesizer_node(state: ResearchState) -> dict:
-    model = ChatGoogleGenerativeAI(model=MODEL)
     all_findings = "\n\n---\n\n".join(
         f"## {r['topic']}\n{r['findings']}" for r in state["results"]
     )
     all_sources = list({s for r in state["results"] for s in r["sources"]})
 
-    response = await model.ainvoke(
+    response = await _invoke(
         [
             {"role": "system", "content": SYNTHESIZER_SYSTEM},
             {
                 "role": "user",
                 "content": f"Query: {state['query']}\n\nAgent findings:\n{all_findings}",
             },
-        ]
+        ],
     )
 
-    report = response.content
+    report = _content_text(response.content)
     if all_sources:
         report += "\n\n## Sources\n" + "\n".join(f"- {s}" for s in all_sources)
 

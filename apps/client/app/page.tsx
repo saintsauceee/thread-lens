@@ -48,19 +48,19 @@ function LandingView({ onSubmit }: { onSubmit: (q: string) => void }) {
   );
 }
 
-// ── Research view ─────────────────────────────────────────────────────────────
-
 function ResearchView({
   query,
   orchestratorPhase,
   agents,
   report,
+  error,
   onReset,
 }: {
   query: string;
   orchestratorPhase: OrchestratorPhase;
   agents: SubAgent[];
   report: ReportData | null;
+  error: string | null;
   onReset: () => void;
 }) {
   const round1 = agents.filter((a) => a.round === 1);
@@ -68,7 +68,6 @@ function ResearchView({
 
   return (
     <div className="min-h-screen bg-neutral-50 flex flex-col">
-      {/* Header */}
       <div className="sticky top-0 z-10 bg-white/90 backdrop-blur border-b border-neutral-100 px-6 py-3.5 flex items-center justify-between shadow-sm">
         <div className="flex items-center gap-3 min-w-0">
           <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center shrink-0 shadow-sm">
@@ -79,11 +78,13 @@ function ResearchView({
           <p className="text-sm text-neutral-800 font-semibold truncate">{query}</p>
         </div>
         <div className="flex items-center gap-3 shrink-0 ml-4">
-          {!report ? (
+          {!report && !error ? (
             <div className="flex items-center gap-2 text-[12px] text-indigo-600 font-medium">
               <span className="w-1.5 h-1.5 rounded-full bg-indigo-500 animate-pulse" />
               Researching…
             </div>
+          ) : error ? (
+            <div className="text-[12px] text-red-600 font-medium">Failed</div>
           ) : (
             <div className="flex items-center gap-2 text-[12px] text-emerald-600 font-medium">
               <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -101,18 +102,15 @@ function ResearchView({
         </div>
       </div>
 
-      {/* Content */}
       <div className="flex-1 max-w-4xl mx-auto w-full px-6 py-8">
         <OrchestratorCard phase={orchestratorPhase} />
 
-        {/* Round 1 agents */}
         {round1.length > 0 && (
           <div className="grid grid-cols-2 gap-3 mb-4">
             {round1.map((a) => <SubAgentCard key={a.id} agent={a} />)}
           </div>
         )}
 
-        {/* Round 2 agents */}
         {round2.length > 0 && (
           <>
             <div className="flex items-center gap-3 my-6">
@@ -139,8 +137,6 @@ function ResearchView({
   );
 }
 
-// ── Main ──────────────────────────────────────────────────────────────────────
-
 export default function Home() {
   const [appPhase, setAppPhase] = useState<AppPhase>('idle');
   const [query, setQuery] = useState('');
@@ -152,6 +148,7 @@ export default function Home() {
     setQuery(q);
     setAgents([]);
     setReport(null);
+    setError(null);
     setOrchestratorPhase('thinking');
     setAppPhase('researching');
   }
@@ -161,6 +158,7 @@ export default function Home() {
     setQuery('');
     setAgents([]);
     setReport(null);
+    setError(null);
   }
 
   useEffect(() => {
@@ -255,6 +253,7 @@ export default function Home() {
       orchestratorPhase={orchestratorPhase}
       agents={agents}
       report={report}
+      error={error}
       onReset={handleReset}
     />
   );
