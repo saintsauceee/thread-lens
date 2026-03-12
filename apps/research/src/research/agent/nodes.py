@@ -6,17 +6,21 @@ from langchain_google_genai import ChatGoogleGenerativeAI
 from langgraph.prebuilt import create_react_agent, ToolNode
 
 from .key_rotator import get_rotator
-from .prompts import EVALUATOR_SYSTEM, ORCHESTRATOR_SYSTEM, SUBAGENT_SYSTEM, SYNTHESIZER_SYSTEM
+from .prompts import ORCHESTRATOR_EVAL_SYSTEM, ORCHESTRATOR_SYSTEM, SUBAGENT_SYSTEM, SYNTHESIZER_SYSTEM
 from .state import ResearchState, ResearchTask, SubagentResult
 from .tools import get_mcp_client
 
-MODEL = "gemini-3.1-flash-lite-preview"
+ORCHESTRATOR_MODEL = "gemini-2.5-flash"
+ORCHESTRATOR_MODEL_FAST = "gemini-3.1-flash-lite-preview"
+
+SUBAGENT_MODEL = "gemini-2.5-flash"
+SUBAGENT_MODEL_FAST = "gemini-3.1-flash-lite-preview"
 
 
-def _model() -> tuple[ChatGoogleGenerativeAI, str]:
+def _model(model_name: str) -> tuple[ChatGoogleGenerativeAI, str]:
     """Get a model instance and its key using the next available API key."""
     key = get_rotator().get_key()
-    return ChatGoogleGenerativeAI(model=MODEL, google_api_key=key), key
+    return ChatGoogleGenerativeAI(model=model_name, google_api_key=key), key
 
 
 def _is_rate_limit(e: Exception) -> bool:
@@ -24,12 +28,12 @@ def _is_rate_limit(e: Exception) -> bool:
     return "429" in s or "QUOTA" in s or "RESOURCE_EXHAUSTED" in s
 
 
-async def _invoke(messages: list) -> object:
+async def _invoke(messages: list, model_name: str) -> object:
     """Invoke the model with automatic key rotation and backoff on 429."""
     rotator = get_rotator()
     for attempt in range(len(rotator._keys) * 2 + 1):
         try:
-            model, key = _model()
+            model, key = _model(model_name)
             return await model.ainvoke(messages)
         except Exception as e:
             if _is_rate_limit(e):
@@ -57,14 +61,31 @@ def _parse_json(content) -> dict | list:
 
 
 async def orchestrator_node(state: ResearchState) -> dict:
-    response = await _invoke(
-        [
+    results = state.get("results", [])
+    model_name = ORCHESTRATOR_MODEL_FAST if state.get("fast") else ORCHESTRATOR_MODEL
+
+    if not results:
+        # Planning mode: break query into tasks
+        response = await _invoke([
             {"role": "system", "content": ORCHESTRATOR_SYSTEM},
             {"role": "user", "content": state["query"]},
-        ],
-    )
-    tasks: list[ResearchTask] = _parse_json(response.content)
-    return {"tasks": tasks, "round": state.get("round", 0) + 1}
+        ], model_name)
+        tasks: list[ResearchTask] = _parse_json(response.content)
+        return {"tasks": tasks, "round": state.get("round", 0) + 1}
+    else:
+        # Evaluation mode: check if findings are sufficient
+        if state.get("round", 1) >= 2:
+            return {"gaps": []}
+        findings_summary = "\n\n".join(
+            f"### {r['topic']}\n{r['findings'][:600]}" for r in results
+        )
+        response = await _invoke([
+            {"role": "system", "content": ORCHESTRATOR_EVAL_SYSTEM},
+            {"role": "user", "content": f"Query: {state['query']}\n\nFindings:\n{findings_summary}"},
+        ], model_name)
+        evaluation = _parse_json(response.content)
+        gaps = [] if evaluation.get("sufficient") else evaluation.get("gaps", [])
+        return {"gaps": gaps}
 
 
 async def subagent_node(state: ResearchState) -> dict:
@@ -76,11 +97,12 @@ async def subagent_node(state: ResearchState) -> dict:
         f"Original query: {state['query']}"
     )
 
+    model_name = SUBAGENT_MODEL_FAST if state.get("fast") else SUBAGENT_MODEL
     last_exc: Exception | None = None
     rotator = get_rotator()
     for attempt in range(6):
         try:
-            model, key = _model()
+            model, key = _model(model_name)
             client = get_mcp_client()
             tools = await client.get_tools()
             tool_node = ToolNode(tools, handle_tool_errors=True)
@@ -123,26 +145,6 @@ async def subagent_node(state: ResearchState) -> dict:
     }
 
 
-async def evaluator_node(state: ResearchState) -> dict:
-    if state.get("round", 1) >= 2:
-        return {"gaps": []}
-
-    findings_summary = "\n\n".join(
-        f"### {r['topic']}\n{r['findings'][:600]}" for r in state["results"]
-    )
-    response = await _invoke(
-        [
-            {"role": "system", "content": EVALUATOR_SYSTEM},
-            {
-                "role": "user",
-                "content": f"Query: {state['query']}\n\nFindings:\n{findings_summary}",
-            },
-        ],
-    )
-    evaluation = _parse_json(response.content)
-    gaps = [] if evaluation.get("sufficient") else evaluation.get("gaps", [])
-    return {"gaps": gaps}
-
 
 async def synthesizer_node(state: ResearchState) -> dict:
     all_findings = "\n\n---\n\n".join(
@@ -150,6 +152,7 @@ async def synthesizer_node(state: ResearchState) -> dict:
     )
     all_sources = list({s for r in state["results"] for s in r["sources"]})
 
+    model_name = SUBAGENT_MODEL_FAST if state.get("fast") else SUBAGENT_MODEL
     response = await _invoke(
         [
             {"role": "system", "content": SYNTHESIZER_SYSTEM},
@@ -158,6 +161,7 @@ async def synthesizer_node(state: ResearchState) -> dict:
                 "content": f"Query: {state['query']}\n\nAgent findings:\n{all_findings}",
             },
         ],
+        model_name,
     )
 
     report = _content_text(response.content)
