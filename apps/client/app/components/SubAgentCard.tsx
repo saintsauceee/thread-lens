@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { SubAgent, ToolCallStatus } from '../lib/simulationData';
 
-function ToolPill({ subreddit, status }: { subreddit: string; status: ToolCallStatus }) {
+function ToolPill({ subreddit: label, status }: { subreddit: string; status: ToolCallStatus }) {
   return (
     <span
       className={`inline-flex items-center gap-1 text-[11px] font-medium px-2 py-0.5 rounded-full transition-all duration-300 ${
@@ -22,7 +22,7 @@ function ToolPill({ subreddit, status }: { subreddit: string; status: ToolCallSt
           <path d="M20 6L9 17l-5-5" />
         </svg>
       )}
-      {subreddit}
+      {label}
     </span>
   );
 }
@@ -73,7 +73,7 @@ export default function SubAgentCard({ agent }: { agent: SubAgent }) {
       {/* Tool calls */}
       <div className="flex flex-wrap gap-1.5">
         {toolCalls.map((tc) => (
-          <ToolPill key={tc.id} subreddit={tc.subreddit} status={tc.status} />
+          <ToolPill key={tc.id} subreddit={tc.label} status={tc.status} />
         ))}
       </div>
 

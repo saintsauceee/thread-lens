@@ -9,11 +9,10 @@ import {
   AppPhase,
   OrchestratorPhase,
   SubAgent,
-  ToolCallStatus,
   ResearchReport as ReportData,
-  buildAgents,
-  generateReport,
 } from './lib/simulationData';
+
+const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000';
 
 // ── Landing ───────────────────────────────────────────────────────────────────
 
@@ -132,10 +131,8 @@ function ResearchView({
           </>
         )}
 
-        {/* Spacer when no round 2 yet */}
         {round2.length === 0 && <div className="mb-8" />}
 
-        {/* Report */}
         {report && <ResearchReport report={report} />}
       </div>
     </div>
@@ -150,26 +147,6 @@ export default function Home() {
   const [orchestratorPhase, setOrchestratorPhase] = useState<OrchestratorPhase>('thinking');
   const [agents, setAgents] = useState<SubAgent[]>([]);
   const [report, setReport] = useState<ReportData | null>(null);
-
-  function addAgent(agent: SubAgent) {
-    setAgents((prev) => [...prev, { ...agent, toolCalls: agent.toolCalls.map((tc) => ({ ...tc })) }]);
-  }
-
-  function updateToolCall(agentId: number, tcId: number, status: ToolCallStatus) {
-    setAgents((prev) =>
-      prev.map((a) =>
-        a.id === agentId
-          ? { ...a, toolCalls: a.toolCalls.map((tc) => (tc.id === tcId ? { ...tc, status } : tc)) }
-          : a
-      )
-    );
-  }
-
-  function completeAgent(agentId: number, sourceCount: number) {
-    setAgents((prev) =>
-      prev.map((a) => (a.id === agentId ? { ...a, status: 'done', sourceCount } : a))
-    );
-  }
 
   function handleSubmit(q: string) {
     setQuery(q);
@@ -189,80 +166,83 @@ export default function Home() {
   useEffect(() => {
     if (appPhase !== 'researching') return;
 
-    const all = buildAgents(query);
-    const timers: ReturnType<typeof setTimeout>[] = [];
-    const t = (ms: number, fn: () => void) => timers.push(setTimeout(fn, ms));
+    let agentCount = 0;
+    let totalSources = 0;
 
-    // ── Orchestrator thinks ─────────────────────────────────────────────────
-    t(1600, () => setOrchestratorPhase('spawning'));
+    const es = new EventSource(`${API_BASE}/research/stream?query=${encodeURIComponent(query)}`);
 
-    // ── Round 1: 4 agents, staggered 300ms apart ────────────────────────────
-    // Each agent: tc[0] active on spawn, tc[1] +300ms, tc[2] +600ms
-    // Each tc done: spawn + tcIndex*300 + 1200ms
-    // Agent done with last tc
+    es.onmessage = (e) => {
+      const event = JSON.parse(e.data);
 
-    // Agent 0 — spawns at 1900
-    t(1900, () => { addAgent({ ...all[0], toolCalls: all[0].toolCalls.map((tc, i) => ({ ...tc, status: i === 0 ? 'active' : 'pending' })) }); });
-    t(2200, () => updateToolCall(0, 1, 'active'));
-    t(2500, () => updateToolCall(0, 2, 'active'));
-    t(3100, () => updateToolCall(0, 0, 'done'));
-    t(3400, () => updateToolCall(0, 1, 'done'));
-    t(3700, () => { updateToolCall(0, 2, 'done'); completeAgent(0, 14); });
+      switch (event.type) {
+        case 'orchestrator_phase':
+          setOrchestratorPhase(event.phase);
+          break;
 
-    // Agent 1 — spawns at 2200
-    t(2200, () => { addAgent({ ...all[1], toolCalls: all[1].toolCalls.map((tc, i) => ({ ...tc, status: i === 0 ? 'active' : 'pending' })) }); });
-    t(2500, () => updateToolCall(1, 1, 'active'));
-    t(2800, () => updateToolCall(1, 2, 'active'));
-    t(3400, () => updateToolCall(1, 0, 'done'));
-    t(3700, () => updateToolCall(1, 1, 'done'));
-    t(4000, () => { updateToolCall(1, 2, 'done'); completeAgent(1, 9); });
+        case 'agent_spawned':
+          agentCount++;
+          setAgents((prev) => [
+            ...prev,
+            {
+              id: event.id,
+              task: event.task,
+              status: 'active',
+              toolCalls: [],
+              sourceCount: null,
+              round: event.round,
+            },
+          ]);
+          break;
 
-    // Agent 2 — spawns at 2500
-    t(2500, () => { addAgent({ ...all[2], toolCalls: all[2].toolCalls.map((tc, i) => ({ ...tc, status: i === 0 ? 'active' : 'pending' })) }); });
-    t(2800, () => updateToolCall(2, 1, 'active'));
-    t(3100, () => updateToolCall(2, 2, 'active'));
-    t(3700, () => updateToolCall(2, 0, 'done'));
-    t(4000, () => updateToolCall(2, 1, 'done'));
-    t(4300, () => { updateToolCall(2, 2, 'done'); completeAgent(2, 12); });
+        case 'tool_call':
+          setAgents((prev) =>
+            prev.map((a) => {
+              if (a.id !== event.agentId) return a;
+              const exists = a.toolCalls.find((tc) => tc.id === event.toolId);
+              if (!exists) {
+                return {
+                  ...a,
+                  toolCalls: [...a.toolCalls, { id: event.toolId, label: event.label, status: event.status }],
+                };
+              }
+              return {
+                ...a,
+                toolCalls: a.toolCalls.map((tc) =>
+                  tc.id === event.toolId ? { ...tc, status: event.status } : tc
+                ),
+              };
+            })
+          );
+          break;
 
-    // Agent 3 — spawns at 2800
-    t(2800, () => { addAgent({ ...all[3], toolCalls: all[3].toolCalls.map((tc, i) => ({ ...tc, status: i === 0 ? 'active' : 'pending' })) }); });
-    t(3100, () => updateToolCall(3, 1, 'active'));
-    t(3400, () => updateToolCall(3, 2, 'active'));
-    t(4000, () => updateToolCall(3, 0, 'done'));
-    t(4300, () => updateToolCall(3, 1, 'done'));
-    t(4600, () => { updateToolCall(3, 2, 'done'); completeAgent(3, 7); });
+        case 'agent_done':
+          totalSources += event.sourceCount ?? 0;
+          setAgents((prev) =>
+            prev.map((a) =>
+              a.id === event.agentId ? { ...a, status: 'done', sourceCount: event.sourceCount } : a
+            )
+          );
+          break;
 
-    // ── Evaluation ──────────────────────────────────────────────────────────
-    t(4800, () => setOrchestratorPhase('evaluating'));
-    t(5300, () => setOrchestratorPhase('spawning'));
+        case 'report_ready':
+          setReport({
+            rawMarkdown: event.report,
+            agentCount,
+            sourceCount: totalSources,
+            durationSec: event.durationSec,
+          });
+          setAppPhase('complete');
+          break;
 
-    // ── Round 2: 2 agents ───────────────────────────────────────────────────
+        case 'done':
+          es.close();
+          break;
+      }
+    };
 
-    // Agent 4 — spawns at 5400
-    t(5400, () => { addAgent({ ...all[4], toolCalls: all[4].toolCalls.map((tc, i) => ({ ...tc, status: i === 0 ? 'active' : 'pending' })) }); });
-    t(5700, () => updateToolCall(4, 1, 'active'));
-    t(6000, () => updateToolCall(4, 2, 'active'));
-    t(6600, () => updateToolCall(4, 0, 'done'));
-    t(6900, () => updateToolCall(4, 1, 'done'));
-    t(7200, () => { updateToolCall(4, 2, 'done'); completeAgent(4, 11); });
+    es.onerror = () => es.close();
 
-    // Agent 5 — spawns at 5700
-    t(5700, () => { addAgent({ ...all[5], toolCalls: all[5].toolCalls.map((tc, i) => ({ ...tc, status: i === 0 ? 'active' : 'pending' })) }); });
-    t(6000, () => updateToolCall(5, 1, 'active'));
-    t(6300, () => updateToolCall(5, 2, 'active'));
-    t(6900, () => updateToolCall(5, 0, 'done'));
-    t(7200, () => updateToolCall(5, 1, 'done'));
-    t(7500, () => { updateToolCall(5, 2, 'done'); completeAgent(5, 8); });
-
-    // ── Synthesis ───────────────────────────────────────────────────────────
-    t(7600, () => setOrchestratorPhase('synthesizing'));
-    t(9000, () => {
-      setReport(generateReport(query));
-      setAppPhase('complete');
-    });
-
-    return () => timers.forEach(clearTimeout);
+    return () => es.close();
   }, [appPhase]);
 
   if (appPhase === 'idle') {
