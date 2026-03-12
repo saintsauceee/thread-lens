@@ -1,14 +1,14 @@
 import json
 import re
 
-from langchain_anthropic import ChatAnthropic
+from langchain_google_genai import ChatGoogleGenerativeAI
 from langgraph.prebuilt import create_react_agent
 
 from .prompts import EVALUATOR_SYSTEM, ORCHESTRATOR_SYSTEM, SUBAGENT_SYSTEM, SYNTHESIZER_SYSTEM
 from .state import ResearchState, ResearchTask, SubagentResult
 from .tools import get_mcp_client
 
-MODEL = "claude-sonnet-4-6"
+MODEL = "gemini-2.0-flash"
 
 
 def _parse_json(text: str) -> dict | list:
@@ -17,7 +17,7 @@ def _parse_json(text: str) -> dict | list:
 
 
 async def orchestrator_node(state: ResearchState) -> dict:
-    model = ChatAnthropic(model=MODEL)
+    model = ChatGoogleGenerativeAI(model=MODEL)
     response = await model.ainvoke(
         [
             {"role": "system", "content": ORCHESTRATOR_SYSTEM},
@@ -30,7 +30,7 @@ async def orchestrator_node(state: ResearchState) -> dict:
 
 async def subagent_node(state: ResearchState) -> dict:
     task: ResearchTask = state["current_task"]
-    model = ChatAnthropic(model=MODEL)
+    model = ChatGoogleGenerativeAI(model=MODEL)
 
     async with get_mcp_client() as client:
         tools = client.get_tools()
@@ -68,7 +68,7 @@ async def evaluator_node(state: ResearchState) -> dict:
     if state.get("round", 1) >= 2:
         return {"gaps": []}
 
-    model = ChatAnthropic(model=MODEL)
+    model = ChatGoogleGenerativeAI(model=MODEL)
     findings_summary = "\n\n".join(
         f"### {r['topic']}\n{r['findings'][:600]}" for r in state["results"]
     )
@@ -87,7 +87,7 @@ async def evaluator_node(state: ResearchState) -> dict:
 
 
 async def synthesizer_node(state: ResearchState) -> dict:
-    model = ChatAnthropic(model=MODEL)
+    model = ChatGoogleGenerativeAI(model=MODEL)
     all_findings = "\n\n---\n\n".join(
         f"## {r['topic']}\n{r['findings']}" for r in state["results"]
     )
