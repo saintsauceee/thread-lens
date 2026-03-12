@@ -143,6 +143,7 @@ export default function Home() {
   const [orchestratorPhase, setOrchestratorPhase] = useState<OrchestratorPhase>('thinking');
   const [agents, setAgents] = useState<SubAgent[]>([]);
   const [report, setReport] = useState<ReportData | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   function handleSubmit(q: string) {
     setQuery(q);
