@@ -140,13 +140,15 @@ function ResearchView({
 export default function Home() {
   const [appPhase, setAppPhase] = useState<AppPhase>('idle');
   const [query, setQuery] = useState('');
+  const [fast, setFast] = useState(false);
   const [orchestratorPhase, setOrchestratorPhase] = useState<OrchestratorPhase>('thinking');
   const [agents, setAgents] = useState<SubAgent[]>([]);
   const [report, setReport] = useState<ReportData | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  function handleSubmit(q: string) {
+  function handleSubmit(q: string, fastMode: boolean) {
     setQuery(q);
+    setFast(fastMode);
     setAgents([]);
     setReport(null);
     setError(null);
@@ -168,7 +170,7 @@ export default function Home() {
     let agentCount = 0;
     let totalSources = 0;
 
-    const es = new EventSource(`${API_BASE}/research/stream?query=${encodeURIComponent(query)}`);
+    const es = new EventSource(`${API_BASE}/research/stream?query=${encodeURIComponent(query)}&fast=${fast}`);
 
     es.onmessage = (e) => {
       const event = JSON.parse(e.data);
@@ -242,7 +244,7 @@ export default function Home() {
     es.onerror = () => es.close();
 
     return () => es.close();
-  }, [appPhase]);
+  }, [appPhase, fast]);
 
   if (appPhase === 'idle') {
     return <LandingView onSubmit={handleSubmit} />;

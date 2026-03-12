@@ -16,6 +16,7 @@ class SubagentResult(TypedDict):
 
 class ResearchState(TypedDict):
     query: str
+    fast: bool
     tasks: list[ResearchTask]
     current_task: ResearchTask
     results: Annotated[list[SubagentResult], operator.add]

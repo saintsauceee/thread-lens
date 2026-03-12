@@ -11,8 +11,9 @@ router = APIRouter(prefix="/research", tags=["research"])
 
 _graph = build_graph()
 
-_INITIAL_STATE = lambda query: {
+_INITIAL_STATE = lambda query, fast=False: {
     "query": query,
+    "fast": fast,
     "tasks": [],
     "results": [],
     "gaps": [],
@@ -21,7 +22,7 @@ _INITIAL_STATE = lambda query: {
 
 
 @router.get("/stream")
-async def stream_research(query: str):
+async def stream_research(query: str, fast: bool = False):
     async def generate():
         agent_id_counter = 0
         agent_run_ids: dict[str, int] = {}   # run_id -> agent_id
@@ -34,13 +35,13 @@ async def stream_research(query: str):
 
         yield emit({"type": "orchestrator_phase", "phase": "thinking"})
 
-        async for event in _graph.astream_events(_INITIAL_STATE(query), version="v2"):
+        async for event in _graph.astream_events(_INITIAL_STATE(query, fast), version="v2"):
             evt = event["event"]
             name = event["name"]
             run_id = event["run_id"]
             data = event.get("data", {})
 
-            if evt == "on_chain_end" and name == "orchestrator":
+            if evt == "on_chain_end" and name == "orchestrator" and "tasks" in data.get("output", {}):
                 yield emit({"type": "orchestrator_phase", "phase": "spawning"})
 
             elif evt == "on_chain_start" and name == "subagent":
@@ -108,7 +109,7 @@ async def stream_research(query: str):
                         "sourceCount": source_count,
                     })
 
-            elif evt == "on_chain_start" and name == "evaluator":
+            elif evt == "on_chain_start" and name == "orchestrator" and data.get("input", {}).get("results"):
                 yield emit({"type": "orchestrator_phase", "phase": "evaluating"})
 
             elif evt == "on_chain_start" and name == "synthesizer":

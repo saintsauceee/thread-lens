@@ -28,8 +28,8 @@ Collect concrete information: specific recommendations, real experiences, common
 Summarize your findings clearly — be specific, not generic.
 """
 
-EVALUATOR_SYSTEM = """\
-You are a research evaluator. Assess whether the collected research sufficiently answers the query.
+ORCHESTRATOR_EVAL_SYSTEM = """\
+You planned this research. Review the findings and decide if the query is sufficiently answered.
 
 Output JSON only:
 {"sufficient": true/false, "gaps": ["specific gap 1", "specific gap 2"]}
