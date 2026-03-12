@@ -4,11 +4,29 @@ import re
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langgraph.prebuilt import create_react_agent
 
+from .key_rotator import get_rotator
 from .prompts import EVALUATOR_SYSTEM, ORCHESTRATOR_SYSTEM, SUBAGENT_SYSTEM, SYNTHESIZER_SYSTEM
 from .state import ResearchState, ResearchTask, SubagentResult
 from .tools import get_mcp_client
 
-MODEL = "gemini-2.0-flash"
+MODEL = "gemini-2.5-flash"
+
+
+def _model() -> ChatGoogleGenerativeAI:
+    """Get a model instance using the next available API key."""
+    return ChatGoogleGenerativeAI(model=MODEL, google_api_key=get_rotator().get_key())
+
+
+async def _invoke(model: ChatGoogleGenerativeAI, messages: list, key: str) -> object:
+    """Invoke the model, rotating the key on 429."""
+    try:
+        return await model.ainvoke(messages)
+    except Exception as e:
+        if "429" in str(e) or "quota" in str(e).lower() or "resource_exhausted" in str(e).lower():
+            get_rotator().mark_rate_limited(key)
+            fallback = _model()
+            return await fallback.ainvoke(messages)
+        raise
 
 
 def _parse_json(text: str) -> dict | list:
@@ -17,12 +35,16 @@ def _parse_json(text: str) -> dict | list:
 
 
 async def orchestrator_node(state: ResearchState) -> dict:
-    model = ChatGoogleGenerativeAI(model=MODEL)
-    response = await model.ainvoke(
+    rotator = get_rotator()
+    key = rotator.get_key()
+    model = ChatGoogleGenerativeAI(model=MODEL, google_api_key=key)
+    response = await _invoke(
+        model,
         [
             {"role": "system", "content": ORCHESTRATOR_SYSTEM},
             {"role": "user", "content": state["query"]},
-        ]
+        ],
+        key,
     )
     tasks: list[ResearchTask] = _parse_json(response.content)
     return {"tasks": tasks, "round": state.get("round", 0) + 1}
@@ -30,7 +52,7 @@ async def orchestrator_node(state: ResearchState) -> dict:
 
 async def subagent_node(state: ResearchState) -> dict:
     task: ResearchTask = state["current_task"]
-    model = ChatGoogleGenerativeAI(model=MODEL)
+    model = _model()
 
     async with get_mcp_client() as client:
         tools = client.get_tools()
@@ -45,7 +67,6 @@ async def subagent_node(state: ResearchState) -> dict:
 
     findings = result["messages"][-1].content
 
-    # Extract Reddit post URLs from tool calls
     sources: list[str] = []
     for msg in result["messages"]:
         for tc in getattr(msg, "tool_calls", []):
@@ -64,22 +85,25 @@ async def subagent_node(state: ResearchState) -> dict:
 
 
 async def evaluator_node(state: ResearchState) -> dict:
-    # Cap at 2 rounds
     if state.get("round", 1) >= 2:
         return {"gaps": []}
 
-    model = ChatGoogleGenerativeAI(model=MODEL)
+    rotator = get_rotator()
+    key = rotator.get_key()
+    model = ChatGoogleGenerativeAI(model=MODEL, google_api_key=key)
     findings_summary = "\n\n".join(
         f"### {r['topic']}\n{r['findings'][:600]}" for r in state["results"]
     )
-    response = await model.ainvoke(
+    response = await _invoke(
+        model,
         [
             {"role": "system", "content": EVALUATOR_SYSTEM},
             {
                 "role": "user",
                 "content": f"Query: {state['query']}\n\nFindings:\n{findings_summary}",
             },
-        ]
+        ],
+        key,
     )
     evaluation = _parse_json(response.content)
     gaps = [] if evaluation.get("sufficient") else evaluation.get("gaps", [])
@@ -87,20 +111,24 @@ async def evaluator_node(state: ResearchState) -> dict:
 
 
 async def synthesizer_node(state: ResearchState) -> dict:
-    model = ChatGoogleGenerativeAI(model=MODEL)
+    rotator = get_rotator()
+    key = rotator.get_key()
+    model = ChatGoogleGenerativeAI(model=MODEL, google_api_key=key)
     all_findings = "\n\n---\n\n".join(
         f"## {r['topic']}\n{r['findings']}" for r in state["results"]
     )
     all_sources = list({s for r in state["results"] for s in r["sources"]})
 
-    response = await model.ainvoke(
+    response = await _invoke(
+        model,
         [
             {"role": "system", "content": SYNTHESIZER_SYSTEM},
             {
                 "role": "user",
                 "content": f"Query: {state['query']}\n\nAgent findings:\n{all_findings}",
             },
-        ]
+        ],
+        key,
     )
 
     report = response.content
