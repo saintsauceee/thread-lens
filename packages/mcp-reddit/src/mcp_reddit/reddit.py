@@ -35,6 +35,11 @@ async def search(
     limit: int = 10,
 ) -> list[dict]:
     """Search Reddit posts, optionally within a specific subreddit."""
+    # Reddit doesn't support comma-separated subreddits — use only the first
+    if subreddit:
+        subreddit = subreddit.split(",")[0].strip()
+        if subreddit.startswith("r/"):
+            subreddit = subreddit[2:]
     path = f"/r/{subreddit}/search.json" if subreddit else "/search.json"
     params: dict = {
         "q": query,
@@ -46,7 +51,7 @@ async def search(
     if subreddit:
         params["restrict_sr"] = "1"
 
-    async with httpx.AsyncClient() as client:
+    async with httpx.AsyncClient(follow_redirects=True) as client:
         r = await client.get(f"{BASE_URL}{path}", params=params, headers=HEADERS)
         r.raise_for_status()
         children = r.json()["data"]["children"]
@@ -55,7 +60,7 @@ async def search(
 
 async def get_post(post_id: str, comment_limit: int = 20) -> tuple[dict, list[dict]]:
     """Fetch a post and its top-level comments by post ID."""
-    async with httpx.AsyncClient() as client:
+    async with httpx.AsyncClient(follow_redirects=True) as client:
         r = await client.get(
             f"{BASE_URL}/comments/{post_id}.json",
             params={"limit": comment_limit, "depth": 2},
@@ -79,7 +84,7 @@ async def get_top_posts(
     limit: int = 10,
 ) -> list[dict]:
     """Get top posts from a subreddit by time period."""
-    async with httpx.AsyncClient() as client:
+    async with httpx.AsyncClient(follow_redirects=True) as client:
         r = await client.get(
             f"{BASE_URL}/r/{subreddit}/top.json",
             params={"t": time_filter, "limit": limit},

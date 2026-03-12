@@ -9,13 +9,10 @@ import {
   AppPhase,
   OrchestratorPhase,
   SubAgent,
-  ToolCallStatus,
   ResearchReport as ReportData,
-  buildAgents,
-  generateReport,
 } from './lib/simulationData';
 
-// ── Landing ───────────────────────────────────────────────────────────────────
+const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000';
 
 function LandingView({ onSubmit }: { onSubmit: (q: string) => void }) {
   return (
@@ -49,19 +46,19 @@ function LandingView({ onSubmit }: { onSubmit: (q: string) => void }) {
   );
 }
 
-// ── Research view ─────────────────────────────────────────────────────────────
-
 function ResearchView({
   query,
   orchestratorPhase,
   agents,
   report,
+  error,
   onReset,
 }: {
   query: string;
   orchestratorPhase: OrchestratorPhase;
   agents: SubAgent[];
   report: ReportData | null;
+  error: string | null;
   onReset: () => void;
 }) {
   const round1 = agents.filter((a) => a.round === 1);
@@ -69,7 +66,6 @@ function ResearchView({
 
   return (
     <div className="min-h-screen bg-neutral-50 flex flex-col">
-      {/* Header */}
       <div className="sticky top-0 z-10 bg-white/90 backdrop-blur border-b border-neutral-100 px-6 py-3.5 flex items-center justify-between shadow-sm">
         <div className="flex items-center gap-3 min-w-0">
           <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center shrink-0 shadow-sm">
@@ -80,11 +76,13 @@ function ResearchView({
           <p className="text-sm text-neutral-800 font-semibold truncate">{query}</p>
         </div>
         <div className="flex items-center gap-3 shrink-0 ml-4">
-          {!report ? (
+          {!report && !error ? (
             <div className="flex items-center gap-2 text-[12px] text-indigo-600 font-medium">
               <span className="w-1.5 h-1.5 rounded-full bg-indigo-500 animate-pulse" />
               Researching…
             </div>
+          ) : error ? (
+            <div className="text-[12px] text-red-600 font-medium">Failed</div>
           ) : (
             <div className="flex items-center gap-2 text-[12px] text-emerald-600 font-medium">
               <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -102,18 +100,15 @@ function ResearchView({
         </div>
       </div>
 
-      {/* Content */}
       <div className="flex-1 max-w-4xl mx-auto w-full px-6 py-8">
         <OrchestratorCard phase={orchestratorPhase} />
 
-        {/* Round 1 agents */}
         {round1.length > 0 && (
           <div className="grid grid-cols-2 gap-3 mb-4">
             {round1.map((a) => <SubAgentCard key={a.id} agent={a} />)}
           </div>
         )}
 
-        {/* Round 2 agents */}
         {round2.length > 0 && (
           <>
             <div className="flex items-center gap-3 my-6">
@@ -132,17 +127,18 @@ function ResearchView({
           </>
         )}
 
-        {/* Spacer when no round 2 yet */}
         {round2.length === 0 && <div className="mb-8" />}
 
-        {/* Report */}
+        {error && (
+          <div className="rounded-xl border border-red-200 bg-red-50 px-5 py-4 text-sm text-red-700">
+            <span className="font-semibold">Error: </span>{error}
+          </div>
+        )}
         {report && <ResearchReport report={report} />}
       </div>
     </div>
   );
 }
-
-// ── Main ──────────────────────────────────────────────────────────────────────
 
 export default function Home() {
   const [appPhase, setAppPhase] = useState<AppPhase>('idle');
@@ -150,31 +146,13 @@ export default function Home() {
   const [orchestratorPhase, setOrchestratorPhase] = useState<OrchestratorPhase>('thinking');
   const [agents, setAgents] = useState<SubAgent[]>([]);
   const [report, setReport] = useState<ReportData | null>(null);
-
-  function addAgent(agent: SubAgent) {
-    setAgents((prev) => [...prev, { ...agent, toolCalls: agent.toolCalls.map((tc) => ({ ...tc })) }]);
-  }
-
-  function updateToolCall(agentId: number, tcId: number, status: ToolCallStatus) {
-    setAgents((prev) =>
-      prev.map((a) =>
-        a.id === agentId
-          ? { ...a, toolCalls: a.toolCalls.map((tc) => (tc.id === tcId ? { ...tc, status } : tc)) }
-          : a
-      )
-    );
-  }
-
-  function completeAgent(agentId: number, sourceCount: number) {
-    setAgents((prev) =>
-      prev.map((a) => (a.id === agentId ? { ...a, status: 'done', sourceCount } : a))
-    );
-  }
+  const [error, setError] = useState<string | null>(null);
 
   function handleSubmit(q: string) {
     setQuery(q);
     setAgents([]);
     setReport(null);
+    setError(null);
     setOrchestratorPhase('thinking');
     setAppPhase('researching');
   }
@@ -184,85 +162,99 @@ export default function Home() {
     setQuery('');
     setAgents([]);
     setReport(null);
+    setError(null);
   }
 
   useEffect(() => {
     if (appPhase !== 'researching') return;
 
-    const all = buildAgents(query);
-    const timers: ReturnType<typeof setTimeout>[] = [];
-    const t = (ms: number, fn: () => void) => timers.push(setTimeout(fn, ms));
+    let agentCount = 0;
+    let totalSources = 0;
 
-    // ── Orchestrator thinks ─────────────────────────────────────────────────
-    t(1600, () => setOrchestratorPhase('spawning'));
+    const es = new EventSource(`${API_BASE}/research/stream?query=${encodeURIComponent(query)}`);
 
-    // ── Round 1: 4 agents, staggered 300ms apart ────────────────────────────
-    // Each agent: tc[0] active on spawn, tc[1] +300ms, tc[2] +600ms
-    // Each tc done: spawn + tcIndex*300 + 1200ms
-    // Agent done with last tc
+    es.onmessage = (e) => {
+      const event = JSON.parse(e.data);
 
-    // Agent 0 — spawns at 1900
-    t(1900, () => { addAgent({ ...all[0], toolCalls: all[0].toolCalls.map((tc, i) => ({ ...tc, status: i === 0 ? 'active' : 'pending' })) }); });
-    t(2200, () => updateToolCall(0, 1, 'active'));
-    t(2500, () => updateToolCall(0, 2, 'active'));
-    t(3100, () => updateToolCall(0, 0, 'done'));
-    t(3400, () => updateToolCall(0, 1, 'done'));
-    t(3700, () => { updateToolCall(0, 2, 'done'); completeAgent(0, 14); });
+      switch (event.type) {
+        case 'orchestrator_phase':
+          setOrchestratorPhase(event.phase);
+          break;
 
-    // Agent 1 — spawns at 2200
-    t(2200, () => { addAgent({ ...all[1], toolCalls: all[1].toolCalls.map((tc, i) => ({ ...tc, status: i === 0 ? 'active' : 'pending' })) }); });
-    t(2500, () => updateToolCall(1, 1, 'active'));
-    t(2800, () => updateToolCall(1, 2, 'active'));
-    t(3400, () => updateToolCall(1, 0, 'done'));
-    t(3700, () => updateToolCall(1, 1, 'done'));
-    t(4000, () => { updateToolCall(1, 2, 'done'); completeAgent(1, 9); });
+        case 'agent_spawned':
+          agentCount++;
+          setAgents((prev) => [
+            ...prev,
+            {
+              id: event.id,
+              task: event.task,
+              status: 'active',
+              toolCalls: [],
+              sourceCount: null,
+              round: event.round,
+            },
+          ]);
+          break;
 
-    // Agent 2 — spawns at 2500
-    t(2500, () => { addAgent({ ...all[2], toolCalls: all[2].toolCalls.map((tc, i) => ({ ...tc, status: i === 0 ? 'active' : 'pending' })) }); });
-    t(2800, () => updateToolCall(2, 1, 'active'));
-    t(3100, () => updateToolCall(2, 2, 'active'));
-    t(3700, () => updateToolCall(2, 0, 'done'));
-    t(4000, () => updateToolCall(2, 1, 'done'));
-    t(4300, () => { updateToolCall(2, 2, 'done'); completeAgent(2, 12); });
+        case 'tool_call':
+          setAgents((prev) =>
+            prev.map((a) => {
+              if (a.id !== event.agentId) return a;
+              const exists = a.toolCalls.find((tc) => tc.id === event.toolId);
+              if (!exists) {
+                return {
+                  ...a,
+                  toolCalls: [...a.toolCalls, { id: event.toolId, label: event.label, status: event.status }],
+                };
+              }
+              return {
+                ...a,
+                toolCalls: a.toolCalls.map((tc) =>
+                  tc.id === event.toolId ? { ...tc, status: event.status } : tc
+                ),
+              };
+            })
+          );
+          break;
 
-    // Agent 3 — spawns at 2800
-    t(2800, () => { addAgent({ ...all[3], toolCalls: all[3].toolCalls.map((tc, i) => ({ ...tc, status: i === 0 ? 'active' : 'pending' })) }); });
-    t(3100, () => updateToolCall(3, 1, 'active'));
-    t(3400, () => updateToolCall(3, 2, 'active'));
-    t(4000, () => updateToolCall(3, 0, 'done'));
-    t(4300, () => updateToolCall(3, 1, 'done'));
-    t(4600, () => { updateToolCall(3, 2, 'done'); completeAgent(3, 7); });
+        case 'agent_done':
+          totalSources += event.sourceCount ?? 0;
+          setAgents((prev) =>
+            prev.map((a) =>
+              a.id === event.agentId ? { ...a, status: 'done', sourceCount: event.sourceCount } : a
+            )
+          );
+          break;
 
-    // ── Evaluation ──────────────────────────────────────────────────────────
-    t(4800, () => setOrchestratorPhase('evaluating'));
-    t(5300, () => setOrchestratorPhase('spawning'));
+        case 'report_ready':
+          setReport({
+            rawMarkdown: event.report,
+            agentCount,
+            sourceCount: totalSources,
+            durationSec: event.durationSec,
+          });
+          setOrchestratorPhase('done');
+          setAppPhase('complete');
+          break;
 
-    // ── Round 2: 2 agents ───────────────────────────────────────────────────
+        case 'error':
+          setError(event.message ?? 'An error occurred');
+          setAppPhase('complete');
+          break;
 
-    // Agent 4 — spawns at 5400
-    t(5400, () => { addAgent({ ...all[4], toolCalls: all[4].toolCalls.map((tc, i) => ({ ...tc, status: i === 0 ? 'active' : 'pending' })) }); });
-    t(5700, () => updateToolCall(4, 1, 'active'));
-    t(6000, () => updateToolCall(4, 2, 'active'));
-    t(6600, () => updateToolCall(4, 0, 'done'));
-    t(6900, () => updateToolCall(4, 1, 'done'));
-    t(7200, () => { updateToolCall(4, 2, 'done'); completeAgent(4, 11); });
+        case 'done':
+          es.close();
+          break;
+      }
+    };
 
-    // Agent 5 — spawns at 5700
-    t(5700, () => { addAgent({ ...all[5], toolCalls: all[5].toolCalls.map((tc, i) => ({ ...tc, status: i === 0 ? 'active' : 'pending' })) }); });
-    t(6000, () => updateToolCall(5, 1, 'active'));
-    t(6300, () => updateToolCall(5, 2, 'active'));
-    t(6900, () => updateToolCall(5, 0, 'done'));
-    t(7200, () => updateToolCall(5, 1, 'done'));
-    t(7500, () => { updateToolCall(5, 2, 'done'); completeAgent(5, 8); });
-
-    // ── Synthesis ───────────────────────────────────────────────────────────
-    t(7600, () => setOrchestratorPhase('synthesizing'));
-    t(9000, () => {
-      setReport(generateReport(query));
+    es.onerror = () => {
+      setError('Connection lost. Please try again.');
       setAppPhase('complete');
-    });
+      es.close();
+    };
 
-    return () => timers.forEach(clearTimeout);
+    return () => es.close();
   }, [appPhase]);
 
   if (appPhase === 'idle') {
@@ -275,6 +267,7 @@ export default function Home() {
       orchestratorPhase={orchestratorPhase}
       agents={agents}
       report={report}
+      error={error}
       onReset={handleReset}
     />
   );

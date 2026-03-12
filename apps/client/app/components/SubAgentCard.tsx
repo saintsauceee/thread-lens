@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { SubAgent, ToolCallStatus } from '../lib/simulationData';
 
-function ToolPill({ subreddit, status }: { subreddit: string; status: ToolCallStatus }) {
+function ToolPill({ label, status }: { label: string; status: ToolCallStatus }) {
   return (
     <span
       className={`inline-flex items-center gap-1 text-[11px] font-medium px-2 py-0.5 rounded-full transition-all duration-300 ${
@@ -22,7 +22,7 @@ function ToolPill({ subreddit, status }: { subreddit: string; status: ToolCallSt
           <path d="M20 6L9 17l-5-5" />
         </svg>
       )}
-      {subreddit}
+      {label}
     </span>
   );
 }
@@ -48,7 +48,6 @@ export default function SubAgentCard({ agent }: { agent: SubAgent }) {
         transition: 'opacity 0.4s ease, transform 0.4s ease, border-color 0.5s, background-color 0.5s',
       }}
     >
-      {/* Header */}
       <div className="flex items-center justify-between mb-2.5">
         <span className="text-[11px] font-medium text-neutral-400 uppercase tracking-wide">
           Agent {id + 1}
@@ -67,17 +66,14 @@ export default function SubAgentCard({ agent }: { agent: SubAgent }) {
         </div>
       </div>
 
-      {/* Task */}
       <p className="text-sm text-neutral-700 leading-snug mb-3">{task}</p>
 
-      {/* Tool calls */}
       <div className="flex flex-wrap gap-1.5">
         {toolCalls.map((tc) => (
-          <ToolPill key={tc.id} subreddit={tc.subreddit} status={tc.status} />
+          <ToolPill key={tc.id} label={tc.label} status={tc.status} />
         ))}
       </div>
 
-      {/* Source count */}
       {status === 'done' && sourceCount !== null && (
         <div className="mt-3 pt-3 border-t border-neutral-100 flex items-center justify-between">
           <span className="text-[11px] font-semibold text-emerald-600">

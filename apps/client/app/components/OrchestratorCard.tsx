@@ -4,7 +4,8 @@ const PHASE_CONFIG: Record<OrchestratorPhase, { label: string; color: string }> 
   thinking:    { label: 'Extended thinking',    color: 'bg-neutral-100 text-neutral-500' },
   spawning:    { label: 'Spawning agents',      color: 'bg-indigo-100 text-indigo-700' },
   evaluating:  { label: 'Evaluating findings',  color: 'bg-amber-100 text-amber-700' },
-  synthesizing:{ label: 'Synthesizing report',  color: 'bg-emerald-100 text-emerald-700' },
+  synthesizing:{ label: 'Synthesizing report',  color: 'bg-violet-100 text-violet-700' },
+  done:        { label: 'Complete',             color: 'bg-emerald-100 text-emerald-700' },
 };
 
 export default function OrchestratorCard({ phase }: { phase: OrchestratorPhase }) {
@@ -20,7 +21,6 @@ export default function OrchestratorCard({ phase }: { phase: OrchestratorPhase }
         </div>
         <div>
           <p className="text-sm font-semibold text-neutral-900">Orchestrator</p>
-          <p className="text-[11px] text-neutral-400">Claude Opus 4</p>
         </div>
       </div>
 
@@ -32,7 +32,12 @@ export default function OrchestratorCard({ phase }: { phase: OrchestratorPhase }
             <span className="w-1 h-1 rounded-full bg-neutral-400 animate-bounce" style={{ animationDelay: '300ms' }} />
           </span>
         )}
-        {phase !== 'thinking' && (
+        {phase === 'done' && (
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M20 6L9 17l-5-5" />
+          </svg>
+        )}
+        {phase !== 'thinking' && phase !== 'done' && (
           <span className="w-1.5 h-1.5 rounded-full bg-current opacity-70 animate-pulse" />
         )}
         {label}

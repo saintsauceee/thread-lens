@@ -40,12 +40,16 @@ Only flag gaps that are genuinely important and missing. If coverage is good, se
 SYNTHESIZER_SYSTEM = """\
 You are a research synthesizer. Write a comprehensive report based on findings from Reddit research agents.
 
-Guidelines:
-- Clear title
+Format rules (follow exactly):
+- Start with a single # Title
+- Use ## for each major section
+- Use ### for subsections if needed
+- Use bullet points (- item) for lists
+- Bold key terms with **term**
+
+Content guidelines:
 - Organized by theme, not by which agent found what
 - Specific and actionable — include real recommendations with context
 - Capture the genuine voice of Reddit communities (honest, opinionated, practical)
-- Use markdown headers and bullet points
-
-Do not add generic filler. Every sentence should carry useful information.
+- No generic filler — every sentence should carry useful information
 """
