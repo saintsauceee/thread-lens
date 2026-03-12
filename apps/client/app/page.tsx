@@ -14,6 +14,8 @@ import {
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000';
 
+// ── Landing ───────────────────────────────────────────────────────────────────
+
 function LandingView({ onSubmit }: { onSubmit: (q: string) => void }) {
   return (
     <div className="h-screen bg-white flex flex-col items-center justify-center gap-8 px-4">
@@ -129,11 +131,6 @@ function ResearchView({
 
         {round2.length === 0 && <div className="mb-8" />}
 
-        {error && (
-          <div className="rounded-xl border border-red-200 bg-red-50 px-5 py-4 text-sm text-red-700">
-            <span className="font-semibold">Error: </span>{error}
-          </div>
-        )}
         {report && <ResearchReport report={report} />}
       </div>
     </div>
@@ -146,7 +143,6 @@ export default function Home() {
   const [orchestratorPhase, setOrchestratorPhase] = useState<OrchestratorPhase>('thinking');
   const [agents, setAgents] = useState<SubAgent[]>([]);
   const [report, setReport] = useState<ReportData | null>(null);
-  const [error, setError] = useState<string | null>(null);
 
   function handleSubmit(q: string) {
     setQuery(q);
@@ -233,12 +229,6 @@ export default function Home() {
             sourceCount: totalSources,
             durationSec: event.durationSec,
           });
-          setOrchestratorPhase('done');
-          setAppPhase('complete');
-          break;
-
-        case 'error':
-          setError(event.message ?? 'An error occurred');
           setAppPhase('complete');
           break;
 
@@ -248,11 +238,7 @@ export default function Home() {
       }
     };
 
-    es.onerror = () => {
-      setError('Connection lost. Please try again.');
-      setAppPhase('complete');
-      es.close();
-    };
+    es.onerror = () => es.close();
 
     return () => es.close();
   }, [appPhase]);

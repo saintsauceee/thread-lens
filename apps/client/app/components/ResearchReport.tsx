@@ -29,43 +29,20 @@ export default function ResearchReport({ report }: { report: ReportData }) {
         ))}
       </div>
 
-      <div className="bg-white border border-neutral-200 rounded-2xl shadow-sm overflow-hidden">
-        <div className="px-8 py-7 space-y-6">
-          <ReactMarkdown
-            remarkPlugins={[remarkGfm]}
-            components={{
-              h1: ({ children }) => (
-                <h1 className="text-lg font-semibold text-neutral-900 tracking-tight mb-1">{children}</h1>
-              ),
-              h2: ({ children }) => (
-                <h2 className="text-[11px] font-semibold uppercase tracking-widest text-neutral-400 mt-8 mb-3 first:mt-0">{children}</h2>
-              ),
-              h3: ({ children }) => (
-                <h3 className="text-[13px] font-semibold text-neutral-700 mt-5 mb-2">{children}</h3>
-              ),
-              p: ({ children }) => (
-                <p className="text-sm text-neutral-600 leading-relaxed">{children}</p>
-              ),
-              ul: ({ children }) => (
-                <ul className="space-y-1.5 my-3">{children}</ul>
-              ),
-              li: ({ children }) => (
-                <li className="flex gap-2 text-sm text-neutral-600 leading-relaxed">
-                  <span className="mt-[7px] w-1 h-1 rounded-full bg-neutral-300 shrink-0" />
-                  <span>{children}</span>
-                </li>
-              ),
-              strong: ({ children }) => (
-                <strong className="font-semibold text-neutral-800">{children}</strong>
-              ),
-              a: ({ href, children }) => (
-                <a href={href} className="text-indigo-500 hover:underline" target="_blank" rel="noopener noreferrer">{children}</a>
-              ),
-              hr: () => (
-                <hr className="border-neutral-100 my-6" />
-              ),
-            }}
-          >
+      {/* Report card */}
+      <div className="bg-white border border-neutral-200 rounded-2xl p-7 shadow-sm">
+        <div className="prose prose-sm max-w-none
+          prose-headings:font-semibold prose-headings:text-neutral-900
+          prose-h1:text-base prose-h1:mb-4
+          prose-h2:text-[13px] prose-h2:uppercase prose-h2:tracking-widest prose-h2:text-neutral-400 prose-h2:font-semibold prose-h2:mt-7 prose-h2:mb-2
+          prose-h3:text-[11px] prose-h3:uppercase prose-h3:tracking-widest prose-h3:text-neutral-400 prose-h3:font-semibold prose-h3:mt-6 prose-h3:mb-2
+          prose-p:text-sm prose-p:text-neutral-700 prose-p:leading-relaxed
+          prose-li:text-sm prose-li:text-neutral-700 prose-li:leading-relaxed
+          prose-a:text-indigo-500 prose-a:no-underline hover:prose-a:underline
+          prose-hr:border-neutral-100
+          prose-strong:text-neutral-900
+        ">
+          <ReactMarkdown remarkPlugins={[remarkGfm]}>
             {report.rawMarkdown}
           </ReactMarkdown>
         </div>
