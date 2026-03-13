@@ -49,9 +49,7 @@ export default function SubAgentCard({ agent }: { agent: SubAgent }) {
       }}
     >
       <div className="flex items-center justify-between mb-2.5">
-        <span className="text-[11px] font-medium text-neutral-400 uppercase tracking-wide">
-          Agent {id + 1}
-        </span>
+        <span className="text-[11px] font-medium text-neutral-400 uppercase tracking-wide">Agent {id + 1}</span>
         <div className="flex items-center gap-1.5">
           {status === 'active' ? (
             <span className="w-1.5 h-1.5 rounded-full bg-indigo-500 animate-pulse" />
@@ -75,11 +73,7 @@ export default function SubAgentCard({ agent }: { agent: SubAgent }) {
       </div>
 
       {status === 'done' && sourceCount !== null && (
-        <div className="mt-3 pt-3 border-t border-neutral-100 flex items-center justify-between">
-          <span className="text-[11px] font-semibold text-emerald-600">
-            {sourceCount} posts collected
-          </span>
-        </div>
+        <p className="mt-4 text-[11px] font-semibold text-emerald-600">{sourceCount} posts collected</p>
       )}
     </div>
   );

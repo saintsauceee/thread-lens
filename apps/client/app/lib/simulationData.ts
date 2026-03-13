@@ -1,7 +1,7 @@
 export type ToolCallStatus = 'pending' | 'active' | 'done';
 export type AgentStatus = 'active' | 'done';
 export type OrchestratorPhase = 'thinking' | 'spawning' | 'evaluating' | 'synthesizing' | 'done';
-export type AppPhase = 'idle' | 'researching' | 'complete';
+export type AppPhase = 'idle' | 'clarifying' | 'researching' | 'complete';
 
 export interface ToolCall {
   id: number;

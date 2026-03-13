@@ -1,19 +1,22 @@
 import asyncio
 import json
+from typing import Optional
 
 from fastapi import APIRouter, HTTPException
 from sse_starlette.sse import EventSourceResponse
 
 from research.agent import build_graph
+from research.agent.nodes import clarify_query
 from research.models import ResearchRequest, ResearchResponse
 
 router = APIRouter(prefix="/research", tags=["research"])
 
 _graph = build_graph()
 
-_INITIAL_STATE = lambda query, fast=False: {
+_INITIAL_STATE = lambda query, fast=False, clarifications=None: {
     "query": query,
     "fast": fast,
+    "clarifications": clarifications or [],
     "tasks": [],
     "results": [],
     "gaps": [],
@@ -21,8 +24,14 @@ _INITIAL_STATE = lambda query, fast=False: {
 }
 
 
+@router.get("/clarify")
+async def clarify(query: str, fast: bool = False):
+    questions = await clarify_query(query, fast)
+    return {"questions": questions}
+
+
 @router.get("/stream")
-async def stream_research(query: str, fast: bool = False):
+async def stream_research(query: str, fast: bool = False, clarifications: Optional[str] = None):
     async def generate():
         agent_id_counter = 0
         agent_run_ids: dict[str, int] = {}   # run_id -> agent_id
@@ -30,12 +39,19 @@ async def stream_research(query: str, fast: bool = False):
         tool_run_ids: dict[str, tuple] = {}  # run_id -> (agent_id, tool_id)
         start = asyncio.get_event_loop().time()
 
+        parsed_clarifications = None
+        if clarifications:
+            try:
+                parsed_clarifications = json.loads(clarifications)
+            except (json.JSONDecodeError, ValueError):
+                pass
+
         def emit(payload: dict) -> dict:
             return {"data": json.dumps(payload)}
 
         yield emit({"type": "orchestrator_phase", "phase": "thinking"})
 
-        async for event in _graph.astream_events(_INITIAL_STATE(query, fast), version="v2"):
+        async for event in _graph.astream_events(_INITIAL_STATE(query, fast, parsed_clarifications), version="v2"):
             evt = event["event"]
             name = event["name"]
             run_id = event["run_id"]
