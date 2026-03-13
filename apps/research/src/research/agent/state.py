@@ -14,9 +14,15 @@ class SubagentResult(TypedDict):
     sources: list[str]
 
 
+class Clarification(TypedDict):
+    question: str
+    answer: str
+
+
 class ResearchState(TypedDict):
     query: str
     fast: bool
+    clarifications: list[Clarification]
     tasks: list[ResearchTask]
     current_task: ResearchTask
     results: Annotated[list[SubagentResult], operator.add]

@@ -6,7 +6,7 @@ from langchain_google_genai import ChatGoogleGenerativeAI
 from langgraph.prebuilt import create_react_agent, ToolNode
 
 from .key_rotator import get_rotator
-from .prompts import ORCHESTRATOR_EVAL_SYSTEM, ORCHESTRATOR_SYSTEM, SUBAGENT_SYSTEM, SYNTHESIZER_SYSTEM
+from .prompts import CLARIFY_SYSTEM, ORCHESTRATOR_EVAL_SYSTEM, ORCHESTRATOR_SYSTEM, SUBAGENT_SYSTEM, SYNTHESIZER_SYSTEM
 from .state import ResearchState, ResearchTask, SubagentResult
 from .tools import get_mcp_client
 
@@ -60,15 +60,31 @@ def _parse_json(content) -> dict | list:
     return json.loads(match.group(1) if match else text)
 
 
+async def clarify_query(query: str, fast: bool = False) -> list[str]:
+    """Call LLM to generate clarifying questions for the query."""
+    model_name = ORCHESTRATOR_MODEL_FAST if fast else ORCHESTRATOR_MODEL
+    response = await _invoke([
+        {"role": "system", "content": CLARIFY_SYSTEM},
+        {"role": "user", "content": query},
+    ], model_name)
+    return _parse_json(response.content)
+
+
 async def orchestrator_node(state: ResearchState) -> dict:
     results = state.get("results", [])
     model_name = ORCHESTRATOR_MODEL_FAST if state.get("fast") else ORCHESTRATOR_MODEL
 
     if not results:
         # Planning mode: break query into tasks
+        clarifications = state.get("clarifications") or []
+        user_content = state["query"]
+        if clarifications:
+            qa_lines = "\n".join(f"Q: {c['question']}\nA: {c['answer']}" for c in clarifications if c.get("answer"))
+            if qa_lines:
+                user_content += f"\n\nUser clarifications:\n{qa_lines}"
         response = await _invoke([
             {"role": "system", "content": ORCHESTRATOR_SYSTEM},
-            {"role": "user", "content": state["query"]},
+            {"role": "user", "content": user_content},
         ], model_name)
         tasks: list[ResearchTask] = _parse_json(response.content)
         return {"tasks": tasks, "round": state.get("round", 0) + 1}

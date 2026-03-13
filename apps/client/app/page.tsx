@@ -137,10 +137,113 @@ function ResearchView({
   );
 }
 
+function ClarifyView({
+  query,
+  fast,
+  onStart,
+  onSkip,
+}: {
+  query: string;
+  fast: boolean;
+  onStart: (answers: { question: string; answer: string }[]) => void;
+  onSkip: () => void;
+}) {
+  const [questions, setQuestions] = useState<string[]>([]);
+  const [answers, setAnswers] = useState<string[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetch(`${API_BASE}/research/clarify?query=${encodeURIComponent(query)}&fast=${fast}`)
+      .then((r) => r.json())
+      .then((data) => {
+        const qs: string[] = data.questions ?? [];
+        setQuestions(qs);
+        setAnswers(qs.map(() => ''));
+      })
+      .catch(() => onSkip())
+      .finally(() => setLoading(false));
+  }, []);
+
+  function handleStart() {
+    const clarifications = questions.map((q, i) => ({ question: q, answer: answers[i] }));
+    onStart(clarifications);
+  }
+
+  return (
+    <div className="h-screen bg-white flex flex-col items-center justify-center gap-8 px-4">
+      <div className="relative">
+        <div
+          className="absolute -inset-10 rounded-full blur-3xl pointer-events-none"
+          style={{ background: 'radial-gradient(circle, rgba(99,102,241,0.22) 0%, transparent 70%)' }}
+        />
+        <div
+          className="relative w-[72px] h-[72px] rounded-[22px] bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center"
+          style={{ boxShadow: '0 0 48px rgba(99,102,241,0.45), 0 8px 32px rgba(0,0,0,0.3)' }}
+        >
+          <svg width="30" height="30" viewBox="0 0 24 24" fill="currentColor" className="text-white">
+            <path d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 00-2.456 2.456zM16.894 20.567L16.5 21.75l-.394-1.183a2.25 2.25 0 00-1.423-1.423L13.5 18.75l1.183-.394a2.25 2.25 0 001.423-1.423l.394-1.183.394 1.183a2.25 2.25 0 001.423 1.423l1.183.394-1.183.394a2.25 2.25 0 00-1.423 1.423z" />
+          </svg>
+        </div>
+      </div>
+
+      <div className="w-full flex flex-col gap-6" style={{ maxWidth: '600px' }}>
+        <div>
+          <p className="text-[13px] text-neutral-500 font-medium mb-1">Your query</p>
+          <p className="text-[15px] text-neutral-800 font-semibold">{query}</p>
+        </div>
+
+        {loading ? (
+          <div className="flex flex-col gap-4">
+            {[0, 1, 2].map((i) => (
+              <div key={i} className="flex flex-col gap-2 animate-pulse">
+                <div className="h-3.5 bg-neutral-200 rounded w-3/4" />
+                <div className="h-9 bg-neutral-100 rounded-lg" />
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="flex flex-col gap-5">
+            {questions.map((q, i) => (
+              <div key={i} className="flex flex-col gap-1.5">
+                <label className="text-[13px] font-medium text-neutral-700">{q}</label>
+                <input
+                  type="text"
+                  value={answers[i]}
+                  onChange={(e) => setAnswers((prev) => prev.map((a, j) => (j === i ? e.target.value : a)))}
+                  placeholder="Your answer (optional)"
+                  className="px-3.5 py-2.5 text-[13px] rounded-lg border border-neutral-200 bg-neutral-50 focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-transparent transition-all text-neutral-800 placeholder:text-neutral-400"
+                />
+              </div>
+            ))}
+          </div>
+        )}
+
+        {!loading && (
+          <div className="flex gap-3 pt-1">
+            <button
+              onClick={handleStart}
+              className="flex-1 py-2.5 text-[13px] font-semibold bg-neutral-900 hover:bg-neutral-700 text-white rounded-lg transition-colors"
+            >
+              Start research
+            </button>
+            <button
+              onClick={onSkip}
+              className="px-5 py-2.5 text-[13px] font-medium text-neutral-500 hover:text-neutral-800 border border-neutral-200 hover:border-neutral-300 rounded-lg transition-colors"
+            >
+              Skip
+            </button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 export default function Home() {
   const [appPhase, setAppPhase] = useState<AppPhase>('idle');
   const [query, setQuery] = useState('');
   const [fast, setFast] = useState(false);
+  const [clarifications, setClarifications] = useState<{ question: string; answer: string }[]>([]);
   const [orchestratorPhase, setOrchestratorPhase] = useState<OrchestratorPhase>('thinking');
   const [agents, setAgents] = useState<SubAgent[]>([]);
   const [report, setReport] = useState<ReportData | null>(null);
@@ -153,12 +256,18 @@ export default function Home() {
     setReport(null);
     setError(null);
     setOrchestratorPhase('thinking');
+    setAppPhase('clarifying');
+  }
+
+  function startResearch(answers: { question: string; answer: string }[]) {
+    setClarifications(answers);
     setAppPhase('researching');
   }
 
   function handleReset() {
     setAppPhase('idle');
     setQuery('');
+    setClarifications([]);
     setAgents([]);
     setReport(null);
     setError(null);
@@ -170,7 +279,10 @@ export default function Home() {
     let agentCount = 0;
     let totalSources = 0;
 
-    const es = new EventSource(`${API_BASE}/research/stream?query=${encodeURIComponent(query)}&fast=${fast}`);
+    const clarificationsParam = clarifications.length
+      ? `&clarifications=${encodeURIComponent(JSON.stringify(clarifications))}`
+      : '';
+    const es = new EventSource(`${API_BASE}/research/stream?query=${encodeURIComponent(query)}&fast=${fast}${clarificationsParam}`);
 
     es.onmessage = (e) => {
       const event = JSON.parse(e.data);
@@ -244,10 +356,21 @@ export default function Home() {
     es.onerror = () => es.close();
 
     return () => es.close();
-  }, [appPhase, fast]);
+  }, [appPhase, fast, clarifications]);
 
   if (appPhase === 'idle') {
     return <LandingView onSubmit={handleSubmit} />;
+  }
+
+  if (appPhase === 'clarifying') {
+    return (
+      <ClarifyView
+        query={query}
+        fast={fast}
+        onStart={startResearch}
+        onSkip={() => startResearch([])}
+      />
+    );
   }
 
   return (
