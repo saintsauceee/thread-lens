@@ -16,7 +16,7 @@ const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000';
 
 // ── Landing ───────────────────────────────────────────────────────────────────
 
-function LandingView({ onSubmit }: { onSubmit: (q: string) => void }) {
+function LandingView({ onSubmit }: { onSubmit: (q: string, fast: boolean) => void }) {
   return (
     <div className="h-screen bg-white flex flex-col items-center justify-center gap-8 px-4">
       <div className="relative">
@@ -48,6 +48,79 @@ function LandingView({ onSubmit }: { onSubmit: (q: string) => void }) {
   );
 }
 
+function AgentsSection({ agents }: { agents: SubAgent[] }) {
+  const [expanded, setExpanded] = useState(true);
+  const round1 = agents.filter((a) => a.round === 1);
+  const round2 = agents.filter((a) => a.round === 2);
+  const doneCount = agents.filter((a) => a.status === 'done').length;
+
+  return (
+    <div className="mb-4">
+      <button
+        onClick={() => setExpanded((v) => !v)}
+        className="w-full flex items-center gap-3 mb-3 group"
+      >
+        <div className="flex-1 h-px bg-neutral-200" />
+        <span className="flex items-center gap-1.5 text-[11px] font-semibold text-neutral-400 uppercase tracking-widest shrink-0 group-hover:text-neutral-600 transition-colors">
+          {doneCount === agents.length && agents.length > 0 ? `${agents.length} agents done` : `${doneCount}/${agents.length} agents`}
+          <svg
+            width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"
+            strokeLinecap="round" strokeLinejoin="round"
+            className="transition-transform duration-300"
+            style={{ transform: expanded ? 'rotate(0deg)' : 'rotate(-90deg)' }}
+          >
+            <path d="M6 9l6 6 6-6" />
+          </svg>
+        </span>
+        <div className="flex-1 h-px bg-neutral-200" />
+      </button>
+
+      <div
+        style={{
+          maxHeight: expanded ? '9999px' : 0,
+          overflow: 'hidden',
+          opacity: expanded ? 1 : 0,
+          transition: 'max-height 0.4s ease, opacity 0.3s ease',
+        }}
+      >
+        {round1.length > 0 && (
+          <div className="flex gap-3 mb-4">
+            <div className="flex flex-col gap-3 flex-1">
+              {round1.filter((_, i) => i % 2 === 0).map((a) => <SubAgentCard key={a.id} agent={a} />)}
+            </div>
+            <div className="flex flex-col gap-3 flex-1">
+              {round1.filter((_, i) => i % 2 !== 0).map((a) => <SubAgentCard key={a.id} agent={a} />)}
+            </div>
+          </div>
+        )}
+
+        {round2.length > 0 && (
+          <>
+            <div className="flex items-center gap-3 my-6">
+              <div className="flex-1 h-px bg-neutral-200" />
+              <span className="flex items-center gap-1.5 text-[11px] font-semibold text-neutral-500 uppercase tracking-widest shrink-0">
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35M11 8v6M8 11h6"/>
+                </svg>
+                Expanded research
+              </span>
+              <div className="flex-1 h-px bg-neutral-200" />
+            </div>
+            <div className="flex gap-3 mb-4">
+              <div className="flex flex-col gap-3 flex-1">
+                {round2.filter((_, i) => i % 2 === 0).map((a) => <SubAgentCard key={a.id} agent={a} />)}
+              </div>
+              <div className="flex flex-col gap-3 flex-1">
+                {round2.filter((_, i) => i % 2 !== 0).map((a) => <SubAgentCard key={a.id} agent={a} />)}
+              </div>
+            </div>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function ResearchView({
   query,
   orchestratorPhase,
@@ -63,9 +136,6 @@ function ResearchView({
   error: string | null;
   onReset: () => void;
 }) {
-  const round1 = agents.filter((a) => a.round === 1);
-  const round2 = agents.filter((a) => a.round === 2);
-
   return (
     <div className="min-h-screen bg-neutral-50 flex flex-col">
       <div className="sticky top-0 z-10 bg-white/90 backdrop-blur border-b border-neutral-100 px-6 py-3.5 flex items-center justify-between shadow-sm">
@@ -105,31 +175,7 @@ function ResearchView({
       <div className="flex-1 max-w-4xl mx-auto w-full px-6 py-8">
         <OrchestratorCard phase={orchestratorPhase} />
 
-        {round1.length > 0 && (
-          <div className="grid grid-cols-2 gap-3 mb-4">
-            {round1.map((a) => <SubAgentCard key={a.id} agent={a} />)}
-          </div>
-        )}
-
-        {round2.length > 0 && (
-          <>
-            <div className="flex items-center gap-3 my-6">
-              <div className="flex-1 h-px bg-neutral-200" />
-              <span className="flex items-center gap-1.5 text-[11px] font-semibold text-neutral-500 uppercase tracking-widest shrink-0">
-                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                  <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35M11 8v6M8 11h6"/>
-                </svg>
-                Expanded research
-              </span>
-              <div className="flex-1 h-px bg-neutral-200" />
-            </div>
-            <div className="grid grid-cols-2 gap-3 mb-8">
-              {round2.map((a) => <SubAgentCard key={a.id} agent={a} />)}
-            </div>
-          </>
-        )}
-
-        {round2.length === 0 && <div className="mb-8" />}
+        {agents.length > 0 && <AgentsSection agents={agents} />}
 
         {report && <ResearchReport report={report} />}
       </div>
@@ -288,9 +334,14 @@ export default function Home() {
       const event = JSON.parse(e.data);
 
       switch (event.type) {
-        case 'orchestrator_phase':
-          setOrchestratorPhase(event.phase);
+        case 'orchestrator_phase': {
+          const order: OrchestratorPhase[] = ['thinking', 'spawning', 'evaluating', 'synthesizing', 'done'];
+          setOrchestratorPhase((prev) => {
+            const incoming: OrchestratorPhase = event.phase;
+            return order.indexOf(incoming) > order.indexOf(prev) ? incoming : prev;
+          });
           break;
+        }
 
         case 'agent_spawned':
           agentCount++;
@@ -344,6 +395,7 @@ export default function Home() {
             sourceCount: totalSources,
             durationSec: event.durationSec,
           });
+          setOrchestratorPhase('done');
           setAppPhase('complete');
           break;
 

@@ -21,7 +21,7 @@ Output a JSON array of tasks. Each task:
 - subreddits: 2-3 relevant subreddits (without r/)
 - focus: specific angle or question to answer
 
-Aim for 3-5 tasks that together cover the query comprehensively.
+Use as many tasks as the query genuinely requires — simple or narrow queries need 2-3, broad or multi-faceted queries may need 5-6. Do not pad with redundant tasks.
 Output only valid JSON, no preamble.
 
 Example:
