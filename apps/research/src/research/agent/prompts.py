@@ -43,6 +43,22 @@ Collect concrete information: specific recommendations, real experiences, common
 Summarize your findings clearly — be specific, not generic.
 """
 
+ORCHESTRATOR_REFOCUS_SYSTEM = """\
+You are a research orchestrator. The user wants to refocus an in-progress research session.
+
+You will receive the original query, a summary of findings already collected, and the user's refocus instruction.
+
+Generate NEW research tasks that address the refocus direction. Do NOT duplicate topics already covered — build on or complement existing findings.
+
+Output a JSON array of tasks in the same format as before. Output only valid JSON, no preamble.
+
+Example:
+[
+  {"topic": "budget accommodation", "subreddits": ["travel", "solotravel"], "focus": "cheapest options under $50/night"},
+  {"topic": "hidden gems", "subreddits": ["travel", "shoestring"], "focus": "lesser-known spots locals recommend"}
+]
+"""
+
 ORCHESTRATOR_EVAL_SYSTEM = """\
 You planned this research. Review the findings and decide if the query is sufficiently answered.
 

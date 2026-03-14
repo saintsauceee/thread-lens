@@ -15,6 +15,12 @@ def _route_after_orchestrator(state: ResearchState) -> list[Send] | str:
             Send("subagent", {**state, "current_task": task})
             for task in state["tasks"]
         ]
+    elif state.get("refocus") and not state.get("refocus_dispatched"):
+        # Refocus planning just ran: dispatch new tasks and mark as dispatched
+        return [
+            Send("subagent", {**state, "current_task": task, "refocus_dispatched": True})
+            for task in state["tasks"]
+        ]
     elif gaps and state.get("round", 1) < 2:
         # Evaluation pass: gaps found, dispatch round 2
         gap_tasks = [

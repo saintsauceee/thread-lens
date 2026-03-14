@@ -1,5 +1,6 @@
 import asyncio
 import json
+import uuid
 from typing import Optional
 
 from fastapi import APIRouter, HTTPException
@@ -13,12 +14,17 @@ router = APIRouter(prefix="/research", tags=["research"])
 
 _graph = build_graph()
 
-_INITIAL_STATE = lambda query, fast=False, clarifications=None: {
+# In-memory session store: session_id -> accumulated SubagentResults
+_sessions: dict[str, list] = {}
+
+_INITIAL_STATE = lambda query, fast=False, clarifications=None, partial_results=None, refocus=None: {
     "query": query,
     "fast": fast,
     "clarifications": clarifications or [],
+    "refocus": refocus or "",
+    "refocus_dispatched": False,
     "tasks": [],
-    "results": [],
+    "results": partial_results or [],
     "gaps": [],
     "round": 0,
 }
@@ -31,7 +37,13 @@ async def clarify(query: str, fast: bool = False):
 
 
 @router.get("/stream")
-async def stream_research(query: str, fast: bool = False, clarifications: Optional[str] = None):
+async def stream_research(
+    query: str,
+    fast: bool = False,
+    clarifications: Optional[str] = None,
+    session_id: Optional[str] = None,
+    refocus: Optional[str] = None,
+):
     async def generate():
         agent_id_counter = 0
         agent_run_ids: dict[str, int] = {}   # run_id -> agent_id
@@ -46,12 +58,22 @@ async def stream_research(query: str, fast: bool = False, clarifications: Option
             except (json.JSONDecodeError, ValueError):
                 pass
 
+        # Load partial results from a prior session if refocusing
+        partial_results = _sessions.get(session_id, []) if session_id and refocus else []
+
+        # Create a new session to accumulate results from this run
+        new_session_id = str(uuid.uuid4())
+        _sessions[new_session_id] = list(partial_results)
+
         def emit(payload: dict) -> dict:
             return {"data": json.dumps(payload)}
 
+        yield emit({"type": "session_id", "id": new_session_id})
         yield emit({"type": "orchestrator_phase", "phase": "thinking"})
 
-        async for event in _graph.astream_events(_INITIAL_STATE(query, fast, parsed_clarifications), version="v2"):
+        initial_state = _INITIAL_STATE(query, fast, parsed_clarifications, partial_results, refocus)
+
+        async for event in _graph.astream_events(initial_state, version="v2"):
             evt = event["event"]
             name = event["name"]
             run_id = event["run_id"]
@@ -119,6 +141,8 @@ async def stream_research(query: str, fast: bool = False, clarifications: Option
                     agent_id = agent_run_ids[run_id]
                     results = data.get("output", {}).get("results", [])
                     source_count = sum(len(r.get("sources", [])) for r in results)
+                    # Accumulate results into session for potential future refocus
+                    _sessions[new_session_id].extend(results)
                     yield emit({
                         "type": "agent_done",
                         "agentId": agent_id,
@@ -126,7 +150,11 @@ async def stream_research(query: str, fast: bool = False, clarifications: Option
                     })
 
             elif evt == "on_chain_start" and name == "orchestrator" and data.get("input", {}).get("results"):
-                yield emit({"type": "orchestrator_phase", "phase": "evaluating"})
+                inp = data.get("input", {})
+                if inp.get("refocus") and not inp.get("refocus_dispatched"):
+                    yield emit({"type": "orchestrator_phase", "phase": "thinking"})
+                else:
+                    yield emit({"type": "orchestrator_phase", "phase": "evaluating"})
 
             elif evt == "on_chain_start" and name == "synthesizer":
                 yield emit({"type": "orchestrator_phase", "phase": "synthesizing"})

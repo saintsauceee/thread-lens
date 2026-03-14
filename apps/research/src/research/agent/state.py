@@ -23,6 +23,8 @@ class ResearchState(TypedDict):
     query: str
     fast: bool
     clarifications: list[Clarification]
+    refocus: str
+    refocus_dispatched: bool
     tasks: list[ResearchTask]
     current_task: ResearchTask
     results: Annotated[list[SubagentResult], operator.add]

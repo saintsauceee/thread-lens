@@ -16,6 +16,7 @@ export interface SubAgent {
   toolCalls: ToolCall[];
   sourceCount: number | null;
   round: 1 | 2;
+  dimmed?: boolean;
 }
 
 export interface ResearchReport {

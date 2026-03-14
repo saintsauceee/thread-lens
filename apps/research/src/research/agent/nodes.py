@@ -6,7 +6,7 @@ from langchain_google_genai import ChatGoogleGenerativeAI
 from langgraph.prebuilt import create_react_agent, ToolNode
 
 from .key_rotator import get_rotator
-from .prompts import CLARIFY_SYSTEM, ORCHESTRATOR_EVAL_SYSTEM, ORCHESTRATOR_SYSTEM, SUBAGENT_SYSTEM, SYNTHESIZER_SYSTEM
+from .prompts import CLARIFY_SYSTEM, ORCHESTRATOR_EVAL_SYSTEM, ORCHESTRATOR_REFOCUS_SYSTEM, ORCHESTRATOR_SYSTEM, SUBAGENT_SYSTEM, SYNTHESIZER_SYSTEM
 from .state import ResearchState, ResearchTask, SubagentResult
 from .tools import get_mcp_client
 
@@ -88,9 +88,25 @@ async def orchestrator_node(state: ResearchState) -> dict:
         ], model_name)
         tasks: list[ResearchTask] = _parse_json(response.content)
         return {"tasks": tasks, "round": state.get("round", 0) + 1}
+    elif state.get("refocus") and not state.get("refocus_dispatched"):
+        # Refocus planning mode: generate new tasks based on instruction + existing findings
+        findings_summary = "\n\n".join(
+            f"### {r['topic']}\n{r['findings'][:400]}" for r in results
+        )
+        user_content = (
+            f"Original query: {state['query']}\n\n"
+            f"Already researched:\n{findings_summary}\n\n"
+            f"User refocus instruction: {state['refocus']}"
+        )
+        response = await _invoke([
+            {"role": "system", "content": ORCHESTRATOR_REFOCUS_SYSTEM},
+            {"role": "user", "content": user_content},
+        ], model_name)
+        tasks: list[ResearchTask] = _parse_json(response.content)
+        return {"tasks": tasks, "round": 1}
     else:
         # Evaluation mode: check if findings are sufficient
-        if state.get("round", 1) >= 2:
+        if state.get("round", 1) >= 2 or state.get("refocus_dispatched"):
             return {"gaps": []}
         findings_summary = "\n\n".join(
             f"### {r['topic']}\n{r['findings'][:600]}" for r in results

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import SearchInput from './components/SearchInput';
 import OrchestratorCard from './components/OrchestratorCard';
 import SubAgentCard from './components/SubAgentCard';
@@ -48,10 +48,50 @@ function LandingView({ onSubmit }: { onSubmit: (q: string, fast: boolean) => voi
   );
 }
 
-function AgentsSection({ agents }: { agents: SubAgent[] }) {
-  const [expanded, setExpanded] = useState(true);
+function AgentGrid({ agents }: { agents: SubAgent[] }) {
   const round1 = agents.filter((a) => a.round === 1);
   const round2 = agents.filter((a) => a.round === 2);
+  return (
+    <>
+      {round1.length > 0 && (
+        <div className="flex gap-3 mb-4">
+          <div className="flex flex-col gap-3 flex-1">
+            {round1.filter((_, i) => i % 2 === 0).map((a) => <SubAgentCard key={`${a.id}-${a.dimmed}`} agent={a} />)}
+          </div>
+          <div className="flex flex-col gap-3 flex-1">
+            {round1.filter((_, i) => i % 2 !== 0).map((a) => <SubAgentCard key={`${a.id}-${a.dimmed}`} agent={a} />)}
+          </div>
+        </div>
+      )}
+      {round2.length > 0 && (
+        <>
+          <div className="flex items-center gap-3 my-6">
+            <div className="flex-1 h-px bg-neutral-200" />
+            <span className="flex items-center gap-1.5 text-[11px] font-semibold text-neutral-500 uppercase tracking-widest shrink-0">
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35M11 8v6M8 11h6"/>
+              </svg>
+              Expanded research
+            </span>
+            <div className="flex-1 h-px bg-neutral-200" />
+          </div>
+          <div className="flex gap-3 mb-4">
+            <div className="flex flex-col gap-3 flex-1">
+              {round2.filter((_, i) => i % 2 === 0).map((a) => <SubAgentCard key={`${a.id}-${a.dimmed}`} agent={a} />)}
+            </div>
+            <div className="flex flex-col gap-3 flex-1">
+              {round2.filter((_, i) => i % 2 !== 0).map((a) => <SubAgentCard key={`${a.id}-${a.dimmed}`} agent={a} />)}
+            </div>
+          </div>
+        </>
+      )}
+    </>
+  );
+}
+
+function AgentsSection({ agents, previousAgents }: { agents: SubAgent[]; previousAgents: SubAgent[] }) {
+  const [expanded, setExpanded] = useState(true);
+  const allAgents = [...previousAgents, ...agents];
   const doneCount = agents.filter((a) => a.status === 'done').length;
 
   return (
@@ -83,39 +123,22 @@ function AgentsSection({ agents }: { agents: SubAgent[] }) {
           transition: 'max-height 0.4s ease, opacity 0.3s ease',
         }}
       >
-        {round1.length > 0 && (
-          <div className="flex gap-3 mb-4">
-            <div className="flex flex-col gap-3 flex-1">
-              {round1.filter((_, i) => i % 2 === 0).map((a) => <SubAgentCard key={a.id} agent={a} />)}
-            </div>
-            <div className="flex flex-col gap-3 flex-1">
-              {round1.filter((_, i) => i % 2 !== 0).map((a) => <SubAgentCard key={a.id} agent={a} />)}
-            </div>
-          </div>
-        )}
-
-        {round2.length > 0 && (
+        {previousAgents.length > 0 && (
           <>
+            <AgentGrid agents={previousAgents} />
             <div className="flex items-center gap-3 my-6">
-              <div className="flex-1 h-px bg-neutral-200" />
-              <span className="flex items-center gap-1.5 text-[11px] font-semibold text-neutral-500 uppercase tracking-widest shrink-0">
+              <div className="flex-1 h-px bg-violet-200" />
+              <span className="flex items-center gap-1.5 text-[11px] font-semibold text-violet-500 uppercase tracking-widest shrink-0">
                 <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                  <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35M11 8v6M8 11h6"/>
+                  <path d="M3 12h18M3 6h18M3 18h18" />
                 </svg>
-                Expanded research
+                Refocused
               </span>
-              <div className="flex-1 h-px bg-neutral-200" />
-            </div>
-            <div className="flex gap-3 mb-4">
-              <div className="flex flex-col gap-3 flex-1">
-                {round2.filter((_, i) => i % 2 === 0).map((a) => <SubAgentCard key={a.id} agent={a} />)}
-              </div>
-              <div className="flex flex-col gap-3 flex-1">
-                {round2.filter((_, i) => i % 2 !== 0).map((a) => <SubAgentCard key={a.id} agent={a} />)}
-              </div>
+              <div className="flex-1 h-px bg-violet-200" />
             </div>
           </>
         )}
+        <AgentGrid agents={agents} />
       </div>
     </div>
   );
@@ -125,17 +148,35 @@ function ResearchView({
   query,
   orchestratorPhase,
   agents,
+  previousAgents,
   report,
   error,
   onReset,
+  onStop,
+  onRefocus,
 }: {
   query: string;
   orchestratorPhase: OrchestratorPhase;
   agents: SubAgent[];
+  previousAgents: SubAgent[];
   report: ReportData | null;
   error: string | null;
   onReset: () => void;
+  onStop: () => void;
+  onRefocus: (instruction: string) => void;
 }) {
+  const [showRefocusInput, setShowRefocusInput] = useState(false);
+  const [refocusValue, setRefocusValue] = useState('');
+  const isResearching = !report && !error;
+
+  function submitRefocus() {
+    const text = refocusValue.trim();
+    if (!text) return;
+    setRefocusValue('');
+    setShowRefocusInput(false);
+    onRefocus(text);
+  }
+
   return (
     <div className="min-h-screen bg-neutral-50 flex flex-col">
       <div className="sticky top-0 z-10 bg-white/90 backdrop-blur border-b border-neutral-100 px-6 py-3.5 flex items-center justify-between shadow-sm">
@@ -148,7 +189,7 @@ function ResearchView({
           <p className="text-sm text-neutral-800 font-semibold truncate">{query}</p>
         </div>
         <div className="flex items-center gap-3 shrink-0 ml-4">
-          {!report && !error ? (
+          {isResearching ? (
             <div className="flex items-center gap-2 text-[12px] text-indigo-600 font-medium">
               <span className="w-1.5 h-1.5 rounded-full bg-indigo-500 animate-pulse" />
               Researching…
@@ -163,6 +204,22 @@ function ResearchView({
               Complete
             </div>
           )}
+          {isResearching && (
+            <>
+              <button
+                onClick={() => { setShowRefocusInput((v) => !v); setRefocusValue(''); }}
+                className="text-[12px] font-medium text-violet-600 hover:text-violet-800 border border-violet-200 hover:border-violet-400 px-3 py-1.5 rounded-lg transition-colors"
+              >
+                Refocus
+              </button>
+              <button
+                onClick={onStop}
+                className="text-[12px] font-medium text-neutral-500 hover:text-neutral-800 border border-neutral-200 hover:border-neutral-300 px-3 py-1.5 rounded-lg transition-colors"
+              >
+                Stop
+              </button>
+            </>
+          )}
           <button
             onClick={onReset}
             className="text-[12px] font-medium bg-neutral-900 hover:bg-neutral-700 text-white px-3.5 py-1.5 rounded-lg transition-colors"
@@ -172,10 +229,39 @@ function ResearchView({
         </div>
       </div>
 
+      {showRefocusInput && (
+        <div className="sticky top-[57px] z-10 bg-white border-b border-violet-100 px-6 py-3 flex items-center gap-3 shadow-sm">
+          <input
+            autoFocus
+            type="text"
+            value={refocusValue}
+            onChange={(e) => setRefocusValue(e.target.value)}
+            onKeyDown={(e) => { if (e.key === 'Enter') submitRefocus(); if (e.key === 'Escape') setShowRefocusInput(false); }}
+            placeholder="What should the research focus on instead? e.g. focus on budget options, ignore luxury"
+            className="flex-1 px-3.5 py-2 text-[13px] rounded-lg border border-violet-200 bg-violet-50 focus:outline-none focus:ring-2 focus:ring-violet-400 focus:border-transparent text-neutral-800 placeholder:text-neutral-400 transition-all"
+          />
+          <button
+            onClick={submitRefocus}
+            disabled={!refocusValue.trim()}
+            className="text-[12px] font-semibold bg-violet-600 hover:bg-violet-700 disabled:opacity-40 text-white px-4 py-2 rounded-lg transition-colors"
+          >
+            Refocus
+          </button>
+          <button
+            onClick={() => setShowRefocusInput(false)}
+            className="text-[12px] font-medium text-neutral-400 hover:text-neutral-600 transition-colors"
+          >
+            Cancel
+          </button>
+        </div>
+      )}
+
       <div className="flex-1 max-w-4xl mx-auto w-full px-6 py-8">
         <OrchestratorCard phase={orchestratorPhase} />
 
-        {agents.length > 0 && <AgentsSection agents={agents} />}
+        {(agents.length > 0 || previousAgents.length > 0) && (
+          <AgentsSection agents={agents} previousAgents={previousAgents} />
+        )}
 
         {report && <ResearchReport report={report} />}
       </div>
@@ -292,8 +378,13 @@ export default function Home() {
   const [clarifications, setClarifications] = useState<{ question: string; answer: string }[]>([]);
   const [orchestratorPhase, setOrchestratorPhase] = useState<OrchestratorPhase>('thinking');
   const [agents, setAgents] = useState<SubAgent[]>([]);
+  const [previousAgents, setPreviousAgents] = useState<SubAgent[]>([]);
   const [report, setReport] = useState<ReportData | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [sessionId, setSessionId] = useState<string | null>(null);
+  const [refocusData, setRefocusData] = useState<{ sid: string; instruction: string } | null>(null);
+  const [streamVersion, setStreamVersion] = useState(0);
+  const esRef = useRef<EventSource | null>(null);
 
   function handleSubmit(q: string, fastMode: boolean) {
     setQuery(q);
@@ -311,12 +402,32 @@ export default function Home() {
   }
 
   function handleReset() {
+    esRef.current?.close();
     setAppPhase('idle');
     setQuery('');
     setClarifications([]);
     setAgents([]);
+    setPreviousAgents([]);
     setReport(null);
     setError(null);
+    setSessionId(null);
+    setRefocusData(null);
+    setStreamVersion(0);
+  }
+
+  function handleStop() {
+    esRef.current?.close();
+    setAppPhase('idle');
+    handleReset();
+  }
+
+  function handleRefocus(instruction: string) {
+    if (!sessionId) return;
+    setPreviousAgents((prev) => [...prev, ...agents.map((a) => ({ ...a, status: 'done' as const, dimmed: true }))]);
+    setAgents([]);
+    setOrchestratorPhase('thinking');
+    setRefocusData({ sid: sessionId, instruction });
+    setStreamVersion((v) => v + 1);
   }
 
   useEffect(() => {
@@ -325,15 +436,24 @@ export default function Home() {
     let agentCount = 0;
     let totalSources = 0;
 
-    const clarificationsParam = clarifications.length
-      ? `&clarifications=${encodeURIComponent(JSON.stringify(clarifications))}`
-      : '';
-    const es = new EventSource(`${API_BASE}/research/stream?query=${encodeURIComponent(query)}&fast=${fast}${clarificationsParam}`);
+    const params = new URLSearchParams({ query, fast: String(fast) });
+    if (clarifications.length) params.set('clarifications', JSON.stringify(clarifications));
+    if (refocusData) {
+      params.set('refocus', refocusData.instruction);
+      params.set('session_id', refocusData.sid);
+    }
+
+    const es = new EventSource(`${API_BASE}/research/stream?${params}`);
+    esRef.current = es;
 
     es.onmessage = (e) => {
       const event = JSON.parse(e.data);
 
       switch (event.type) {
+        case 'session_id':
+          setSessionId(event.id);
+          break;
+
         case 'orchestrator_phase': {
           const order: OrchestratorPhase[] = ['thinking', 'spawning', 'evaluating', 'synthesizing', 'done'];
           setOrchestratorPhase((prev) => {
@@ -408,7 +528,7 @@ export default function Home() {
     es.onerror = () => es.close();
 
     return () => es.close();
-  }, [appPhase, fast, clarifications]);
+  }, [appPhase, streamVersion]);
 
   if (appPhase === 'idle') {
     return <LandingView onSubmit={handleSubmit} />;
@@ -430,9 +550,12 @@ export default function Home() {
       query={query}
       orchestratorPhase={orchestratorPhase}
       agents={agents}
+      previousAgents={previousAgents}
       report={report}
       error={error}
       onReset={handleReset}
+      onStop={handleStop}
+      onRefocus={handleRefocus}
     />
   );
 }
