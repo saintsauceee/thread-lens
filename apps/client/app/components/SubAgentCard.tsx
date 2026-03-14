@@ -30,17 +30,20 @@ function ToolPill({ subreddit: label, status }: { subreddit: string; status: Too
 export default function SubAgentCard({ agent }: { agent: SubAgent }) {
   const { status, task, sourceCount, id, toolCalls } = agent;
   const [visible, setVisible] = useState(false);
+  const [collapsed, setCollapsed] = useState(true);
 
   useEffect(() => {
     requestAnimationFrame(() => setVisible(true));
   }, []);
 
+  const isDone = status === 'done';
+
   return (
     <div
-      className={`rounded-xl border p-4 transition-all duration-500 ${
-        status === 'active'
-          ? 'border-indigo-200 bg-white shadow-sm shadow-indigo-100'
-          : 'border-emerald-200 bg-white shadow-sm shadow-emerald-100'
+      className={`rounded-xl border transition-all duration-500 ${
+        isDone
+          ? 'border-emerald-200 bg-white shadow-sm shadow-emerald-100'
+          : 'border-indigo-200 bg-white shadow-sm shadow-indigo-100'
       }`}
       style={{
         opacity: visible ? 1 : 0,
@@ -48,32 +51,57 @@ export default function SubAgentCard({ agent }: { agent: SubAgent }) {
         transition: 'opacity 0.4s ease, transform 0.4s ease, border-color 0.5s, background-color 0.5s',
       }}
     >
-      <div className="flex items-center justify-between mb-2.5">
-        <span className="text-[11px] font-medium text-neutral-400 uppercase tracking-wide">Agent {id + 1}</span>
-        <div className="flex items-center gap-1.5">
-          {status === 'active' ? (
-            <span className="w-1.5 h-1.5 rounded-full bg-indigo-500 animate-pulse" />
-          ) : (
+      <button
+        className="w-full flex items-center justify-between p-4 cursor-pointer"
+        onClick={() => setCollapsed((c) => !c)}
+      >
+        <div className="flex items-center gap-2 min-w-0">
+          <span className="text-[11px] font-medium text-neutral-400 uppercase tracking-wide shrink-0">Agent {id + 1}</span>
+          {collapsed && isDone && sourceCount !== null && (
+            <span className="text-[11px] font-semibold text-emerald-600">
+              {sourceCount} {sourceCount === 1 ? 'post' : 'posts'} collected
+            </span>
+          )}
+        </div>
+        <div className="flex items-center gap-1.5 shrink-0 ml-2">
+          {isDone ? (
             <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="text-emerald-500">
               <path d="M20 6L9 17l-5-5" />
             </svg>
+          ) : (
+            <svg className="w-3 h-3 animate-spin text-indigo-500" viewBox="0 0 24 24" fill="none">
+              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" />
+              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
+            </svg>
           )}
-          <span className={`text-[11px] font-medium ${status === 'active' ? 'text-indigo-600' : 'text-emerald-600'}`}>
-            {status === 'active' ? 'Searching' : 'Done'}
+          <span className={`text-[11px] font-medium ${isDone ? 'text-emerald-600' : 'text-indigo-600'}`}>
+            {isDone ? 'Done' : 'Searching'}
           </span>
+          <svg
+            width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"
+            className={`text-neutral-400 ml-1 transition-transform duration-300 ${collapsed ? '-rotate-90' : ''}`}
+          >
+            <path d="M6 9l6 6 6-6" />
+          </svg>
         </div>
-      </div>
+      </button>
 
-      <p className="text-sm text-neutral-700 leading-snug mb-3">{task}</p>
+      {!collapsed && (
+        <div className="px-4 pb-4">
+          <p className="text-sm text-neutral-700 leading-snug mb-3">{task}</p>
 
-      <div className="flex flex-wrap gap-1.5">
-        {toolCalls.map((tc) => (
-          <ToolPill key={tc.id} subreddit={tc.label} status={tc.status} />
-        ))}
-      </div>
+          <div className="flex flex-wrap gap-1.5">
+            {toolCalls.map((tc) => (
+              <ToolPill key={tc.id} subreddit={tc.label} status={tc.status} />
+            ))}
+          </div>
 
-      {status === 'done' && sourceCount !== null && (
-        <p className="mt-4 text-[11px] font-semibold text-emerald-600">{sourceCount} posts collected</p>
+          {isDone && sourceCount !== null && (
+            <p className="mt-4 text-[11px] font-semibold text-emerald-600">
+              {sourceCount} {sourceCount === 1 ? 'post' : 'posts'} collected
+            </p>
+          )}
+        </div>
       )}
     </div>
   );
