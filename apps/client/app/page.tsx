@@ -208,13 +208,13 @@ function ResearchView({
             <>
               <button
                 onClick={() => { setShowRefocusInput((v) => !v); setRefocusValue(''); }}
-                className="text-[12px] font-medium text-violet-600 hover:text-violet-800 border border-violet-200 hover:border-violet-400 px-3 py-1.5 rounded-lg transition-colors"
+                className="text-[12px] font-semibold bg-violet-600 hover:bg-violet-700 text-white px-3 py-1.5 rounded-lg transition-colors"
               >
                 Refocus
               </button>
               <button
                 onClick={onStop}
-                className="text-[12px] font-medium text-neutral-500 hover:text-neutral-800 border border-neutral-200 hover:border-neutral-300 px-3 py-1.5 rounded-lg transition-colors"
+                className="text-[12px] font-medium text-red-500 hover:text-red-700 border border-red-200 hover:border-red-300 px-3 py-1.5 rounded-lg transition-colors"
               >
                 Stop
               </button>
