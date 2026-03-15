@@ -217,6 +217,9 @@ function ResearchView({
 
           {artifact && <ResearchArtifact artifact={artifact} />}
           {artifact && !isResearching && <FollowUpInput onSubmit={onFollowUp} />}
+          {!artifact && !isResearching && (
+            <p className="text-[13px] text-neutral-400 mt-2">No report was generated.</p>
+          )}
         </div>
       </div>
     </div>
