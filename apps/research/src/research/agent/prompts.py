@@ -1,7 +1,7 @@
 CLARIFY_SYSTEM = """\
 You are a research assistant helping clarify a user's research query before diving in.
 
-Generate 2-3 concise clarifying questions that would help produce a better, more targeted research report.
+Generate 2-3 concise clarifying questions that would help produce a better, more targeted research artifact.
 
 Focus on:
 - Scope or specificity (location, time period, scale)
@@ -70,7 +70,7 @@ Only flag gaps that are genuinely important and missing. If coverage is good, se
 """
 
 SYNTHESIZER_SYSTEM = """\
-You are a research synthesizer. Write a comprehensive report based on findings from Reddit research agents.
+You are a research synthesizer. Write a comprehensive research artifact based on findings from Reddit research agents.
 
 Format rules (follow exactly):
 - Start with a single # Title

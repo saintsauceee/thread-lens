@@ -10,7 +10,7 @@ _SCHEMA = """
 CREATE TABLE IF NOT EXISTS knowledge_bases (
     id TEXT PRIMARY KEY,
     query TEXT NOT NULL,
-    report TEXT NOT NULL DEFAULT '',
+    artifact TEXT NOT NULL DEFAULT '',
     created_at TEXT NOT NULL,
     updated_at TEXT NOT NULL
 );

@@ -11,11 +11,11 @@ async def create_kb(db: aiosqlite.Connection, query: str) -> dict:
     kb_id = str(uuid.uuid4())
     now = _now()
     await db.execute(
-        "INSERT INTO knowledge_bases (id, query, report, created_at, updated_at) VALUES (?, ?, '', ?, ?)",
+        "INSERT INTO knowledge_bases (id, query, artifact, created_at, updated_at) VALUES (?, ?, '', ?, ?)",
         (kb_id, query, now, now),
     )
     await db.commit()
-    return {"id": kb_id, "query": query, "report": "", "created_at": now, "updated_at": now}
+    return {"id": kb_id, "query": query, "artifact": "", "created_at": now, "updated_at": now}
 
 
 async def get_kb(db: aiosqlite.Connection, kb_id: str) -> dict | None:
@@ -26,16 +26,16 @@ async def get_kb(db: aiosqlite.Connection, kb_id: str) -> dict | None:
 
 async def list_kbs(db: aiosqlite.Connection) -> list[dict]:
     async with db.execute(
-        "SELECT id, query, updated_at, substr(report, 1, 200) AS report_preview "
+        "SELECT id, query, updated_at, substr(artifact, 1, 200) AS artifact_preview "
         "FROM knowledge_bases ORDER BY updated_at DESC"
     ) as cur:
         rows = await cur.fetchall()
     return [dict(r) for r in rows]
 
 
-async def update_report(db: aiosqlite.Connection, kb_id: str, report: str) -> None:
+async def update_artifact(db: aiosqlite.Connection, kb_id: str, artifact: str) -> None:
     await db.execute(
-        "UPDATE knowledge_bases SET report = ?, updated_at = ? WHERE id = ?",
-        (report, _now(), kb_id),
+        "UPDATE knowledge_bases SET artifact = ?, updated_at = ? WHERE id = ?",
+        (artifact, _now(), kb_id),
     )
     await db.commit()

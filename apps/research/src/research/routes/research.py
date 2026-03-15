@@ -13,7 +13,7 @@ from thread_lens_db import (
     get_db,
     create_kb,
     get_kb,
-    update_report,
+    update_artifact,
     append_findings,
     get_findings,
     get_session_findings,
@@ -25,7 +25,7 @@ router = APIRouter(prefix="/research", tags=["research"])
 
 _graph = build_graph()
 
-_INITIAL_STATE = lambda query, fast=False, clarifications=None, partial_results=None, refocus=None, kb_id=None, kb_existing_results=None, kb_existing_report=None, follow_up=None: {
+_INITIAL_STATE = lambda query, fast=False, clarifications=None, partial_results=None, refocus=None, kb_id=None, kb_existing_results=None, kb_existing_artifact=None, follow_up=None: {
     "query": query,
     "fast": fast,
     "clarifications": clarifications or [],
@@ -33,7 +33,7 @@ _INITIAL_STATE = lambda query, fast=False, clarifications=None, partial_results=
     "refocus_dispatched": False,
     "kb_id": kb_id or "",
     "kb_existing_results": kb_existing_results or [],
-    "kb_existing_report": kb_existing_report or "",
+    "kb_existing_artifact": kb_existing_artifact or "",
     "follow_up": follow_up or "",
     "tasks": [],
     "results": partial_results or [],
@@ -88,13 +88,13 @@ async def stream_research(
             # Resolve KB: load existing or create new
             is_follow_up = bool(kb_id and follow_up)
             kb_existing_results: list[SubagentResult] = []
-            kb_existing_report = ""
+            kb_existing_artifact = ""
 
             if is_follow_up:
                 existing_kb = await get_kb(db, kb_id)
                 if existing_kb:
                     kb_existing_results = await get_findings(db, kb_id)
-                    kb_existing_report = existing_kb["report"]
+                    kb_existing_artifact = existing_kb["artifact"]
                     active_kb_id = kb_id
                 else:
                     new_kb = await create_kb(db, query)
@@ -119,7 +119,7 @@ async def stream_research(
             initial_state = _INITIAL_STATE(
                 query, fast, parsed_clarifications,
                 partial_results, refocus,
-                active_kb_id, kb_existing_results, kb_existing_report, follow_up,
+                active_kb_id, kb_existing_results, kb_existing_artifact, follow_up,
             )
 
             async for event in _graph.astream_events(initial_state, version="v2"):
@@ -211,15 +211,15 @@ async def stream_research(
                     yield emit({"type": "orchestrator_phase", "phase": "synthesizing"})
 
                 elif evt == "on_chain_end" and name == "synthesizer":
-                    report = data.get("output", {}).get("report", "")
+                    artifact = data.get("output", {}).get("artifact", "")
                     duration = round(asyncio.get_event_loop().time() - start, 1)
 
-                    await update_report(db, active_kb_id, report)
+                    await update_artifact(db, active_kb_id, artifact)
                     await complete_session(db, new_session_id)
 
                     yield emit({
-                        "type": "report_ready",
-                        "report": report,
+                        "type": "artifact_ready",
+                        "artifact": artifact,
                         "durationSec": duration,
                         "kbId": active_kb_id,
                     })
@@ -238,6 +238,6 @@ async def run_research(req: ResearchRequest) -> ResearchResponse:
     sources = list({s for r in result["results"] for s in r["sources"]})
     return ResearchResponse(
         query=req.query,
-        report=result["report"],
+        artifact=result["artifact"],
         sources=sources,
     )

@@ -19,7 +19,7 @@ export interface SubAgent {
   dimmed?: boolean;
 }
 
-export interface ResearchReport {
+export interface ResearchArtifact {
   rawMarkdown: string;
   agentCount: number;
   sourceCount: number;

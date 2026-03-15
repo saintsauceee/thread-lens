@@ -4,13 +4,13 @@ import { useState, useEffect, useRef } from 'react';
 import SearchInput from './components/SearchInput';
 import OrchestratorCard from './components/OrchestratorCard';
 import SubAgentCard from './components/SubAgentCard';
-import ResearchReport from './components/ResearchReport';
+import ResearchArtifact from './components/ResearchArtifact';
 import FollowUpInput from './components/FollowUpInput';
 import {
   AppPhase,
   OrchestratorPhase,
   SubAgent,
-  ResearchReport as ReportData,
+  ResearchArtifact as ArtifactData,
 } from './lib/simulationData';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000';
@@ -150,7 +150,7 @@ function ResearchView({
   orchestratorPhase,
   agents,
   previousAgents,
-  report,
+  artifact,
   error,
   cancelled,
   onReset,
@@ -162,7 +162,7 @@ function ResearchView({
   orchestratorPhase: OrchestratorPhase;
   agents: SubAgent[];
   previousAgents: SubAgent[];
-  report: ReportData | null;
+  artifact: ArtifactData | null;
   error: string | null;
   cancelled: boolean;
   onReset: () => void;
@@ -170,7 +170,7 @@ function ResearchView({
   onRefocus: (instruction: string) => void;
   onFollowUp: (question: string) => void;
 }) {
-  const isResearching = !report && !error && !cancelled;
+  const isResearching = !artifact && !error && !cancelled;
 
   return (
     <div className="min-h-screen bg-neutral-50 flex flex-col">
@@ -205,8 +205,8 @@ function ResearchView({
           <AgentsSection agents={agents} previousAgents={previousAgents} cancelled={cancelled} />
         )}
 
-        {report && <ResearchReport report={report} />}
-        {report && !isResearching && <FollowUpInput onSubmit={onFollowUp} />}
+        {artifact && <ResearchArtifact artifact={artifact} />}
+        {artifact && !isResearching && <FollowUpInput onSubmit={onFollowUp} />}
       </div>
     </div>
   );
@@ -322,7 +322,7 @@ export default function Home() {
   const [orchestratorPhase, setOrchestratorPhase] = useState<OrchestratorPhase>('thinking');
   const [agents, setAgents] = useState<SubAgent[]>([]);
   const [previousAgents, setPreviousAgents] = useState<SubAgent[]>([]);
-  const [report, setReport] = useState<ReportData | null>(null);
+  const [artifact, setArtifact] = useState<ArtifactData | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [cancelled, setCancelled] = useState(false);
   const [sessionId, setSessionId] = useState<string | null>(null);
@@ -336,7 +336,7 @@ export default function Home() {
     setQuery(q);
     setFast(fastMode);
     setAgents([]);
-    setReport(null);
+    setArtifact(null);
     setError(null);
     setOrchestratorPhase('thinking');
     setAppPhase('clarifying');
@@ -354,7 +354,7 @@ export default function Home() {
     setClarifications([]);
     setAgents([]);
     setPreviousAgents([]);
-    setReport(null);
+    setArtifact(null);
     setError(null);
     setCancelled(false);
     setSessionId(null);
@@ -373,7 +373,7 @@ export default function Home() {
   function handleFollowUp(question: string) {
     setPreviousAgents((prev) => [...prev, ...agents.map((a) => ({ ...a, status: 'done' as const, dimmed: true }))]);
     setAgents([]);
-    setReport(null);
+    setArtifact(null);
     setCancelled(false);
     setOrchestratorPhase('thinking');
     setFollowUp(question);
@@ -477,9 +477,9 @@ export default function Home() {
           );
           break;
 
-        case 'report_ready':
-          setReport({
-            rawMarkdown: event.report,
+        case 'artifact_ready':
+          setArtifact({
+            rawMarkdown: event.artifact,
             agentCount,
             sourceCount: totalSources,
             durationSec: event.durationSec,
@@ -520,7 +520,7 @@ export default function Home() {
       orchestratorPhase={orchestratorPhase}
       agents={agents}
       previousAgents={previousAgents}
-      report={report}
+      artifact={artifact}
       error={error}
       cancelled={cancelled}
       onReset={handleReset}

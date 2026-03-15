@@ -3,9 +3,9 @@
 import { useEffect, useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import { ResearchReport as ReportData } from '../lib/simulationData';
+import { ResearchArtifact as ArtifactData } from '../lib/simulationData';
 
-export default function ResearchReport({ report }: { report: ReportData }) {
+export default function ResearchArtifact({ artifact }: { artifact: ArtifactData }) {
   const [visible, setVisible] = useState(false);
 
   useEffect(() => {
@@ -19,9 +19,9 @@ export default function ResearchReport({ report }: { report: ReportData }) {
     >
       <div className="flex items-center gap-2 mb-5">
         {[
-          `${report.agentCount} agents`,
-          `${report.sourceCount} sources`,
-          `${report.durationSec}s`,
+          `${artifact.agentCount} agents`,
+          `${artifact.sourceCount} sources`,
+          `${artifact.durationSec}s`,
         ].map((label) => (
           <span key={label} className="text-[12px] font-medium text-neutral-500 bg-white border border-neutral-200 px-3 py-1 rounded-full shadow-sm">
             {label}
@@ -66,7 +66,7 @@ export default function ResearchReport({ report }: { report: ReportData }) {
               ),
             }}
           >
-            {report.rawMarkdown}
+            {artifact.rawMarkdown}
           </ReactMarkdown>
         </div>
       </div>
