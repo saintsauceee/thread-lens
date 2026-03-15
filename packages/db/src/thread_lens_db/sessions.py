@@ -30,6 +30,14 @@ async def complete_session(db: aiosqlite.Connection, session_id: str) -> None:
     await db.commit()
 
 
+async def cancel_session(db: aiosqlite.Connection, session_id: str) -> None:
+    await db.execute(
+        "UPDATE sessions SET cancelled_at = ? WHERE id = ?",
+        (_now(), session_id),
+    )
+    await db.commit()
+
+
 async def get_sessions(db: aiosqlite.Connection, kb_id: str) -> list[dict]:
     async with db.execute(
         "SELECT * FROM sessions WHERE kb_id = ? ORDER BY created_at",

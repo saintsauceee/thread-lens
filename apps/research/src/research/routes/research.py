@@ -13,17 +13,21 @@ from thread_lens_db import (
     get_db,
     create_kb,
     get_kb,
+    list_kbs,
+    delete_kb,
     update_artifact,
     append_findings,
     get_findings,
     get_session_findings,
     create_session,
     complete_session,
+    cancel_session,
 )
 
 router = APIRouter(prefix="/research", tags=["research"])
 
 _graph = build_graph()
+_running_tasks: dict[str, asyncio.Task] = {}
 
 _INITIAL_STATE = lambda query, fast=False, clarifications=None, partial_results=None, refocus=None, kb_id=None, kb_existing_results=None, kb_existing_artifact=None, follow_up=None: {
     "query": query,
@@ -46,6 +50,28 @@ _INITIAL_STATE = lambda query, fast=False, clarifications=None, partial_results=
 async def clarify(query: str, fast: bool = False):
     questions = await clarify_query(query, fast)
     return {"questions": questions}
+
+
+@router.get("/kbs")
+async def list_kbs_endpoint():
+    async with get_db() as db:
+        return await list_kbs(db)
+
+
+@router.post("/session/{session_id}/cancel")
+async def cancel_session_endpoint(session_id: str):
+    if task := _running_tasks.pop(session_id, None):
+        task.cancel()
+    async with get_db() as db:
+        await cancel_session(db, session_id)
+    return {"ok": True}
+
+
+@router.delete("/kb/{kb_id}")
+async def delete_kb_endpoint(kb_id: str):
+    async with get_db() as db:
+        await delete_kb(db, kb_id)
+    return {"ok": True}
 
 
 @router.get("/kb/{kb_id}")
@@ -112,6 +138,8 @@ async def stream_research(
             session = await create_session(db, active_kb_id, follow_up)
             new_session_id = session["id"]
 
+            _running_tasks[new_session_id] = asyncio.current_task()
+
             yield emit({"type": "kb_id", "id": active_kb_id})
             yield emit({"type": "session_id", "id": new_session_id})
             yield emit({"type": "orchestrator_phase", "phase": "thinking"})
@@ -122,108 +150,117 @@ async def stream_research(
                 active_kb_id, kb_existing_results, kb_existing_artifact, follow_up,
             )
 
-            async for event in _graph.astream_events(initial_state, version="v2"):
-                evt = event["event"]
-                name = event["name"]
-                run_id = event["run_id"]
-                data = event.get("data", {})
+            session_completed = False
+            try:
+                async for event in _graph.astream_events(initial_state, version="v2"):
+                    evt = event["event"]
+                    name = event["name"]
+                    run_id = event["run_id"]
+                    data = event.get("data", {})
 
-                if evt == "on_chain_end" and name == "orchestrator" and "tasks" in data.get("output", {}):
-                    yield emit({"type": "orchestrator_phase", "phase": "spawning"})
+                    if evt == "on_chain_end" and name == "orchestrator" and "tasks" in data.get("output", {}):
+                        yield emit({"type": "orchestrator_phase", "phase": "spawning"})
 
-                elif evt == "on_chain_start" and name == "subagent":
-                    agent_id = agent_id_counter
-                    agent_id_counter += 1
-                    agent_run_ids[run_id] = agent_id
-                    tool_counters[agent_id] = 0
+                    elif evt == "on_chain_start" and name == "subagent":
+                        agent_id = agent_id_counter
+                        agent_id_counter += 1
+                        agent_run_ids[run_id] = agent_id
+                        tool_counters[agent_id] = 0
 
-                    inp = data.get("input", {})
-                    task = inp.get("current_task", {})
-                    round_num = 2 if inp.get("round", 0) >= 2 else 1
+                        inp = data.get("input", {})
+                        task = inp.get("current_task", {})
+                        round_num = 2 if inp.get("round", 0) >= 2 else 1
 
-                    yield emit({
-                        "type": "agent_spawned",
-                        "id": agent_id,
-                        "task": task.get("topic", "Researching…"),
-                        "round": round_num,
-                    })
+                        yield emit({
+                            "type": "agent_spawned",
+                            "id": agent_id,
+                            "task": task.get("topic", "Researching…"),
+                            "round": round_num,
+                        })
 
-                elif evt == "on_tool_start":
-                    parent_ids = event.get("parent_ids", [])
-                    agent_id = next(
-                        (agent_run_ids[pid] for pid in parent_ids if pid in agent_run_ids),
-                        None,
-                    )
-                    if agent_id is not None:
-                        tool_id = tool_counters[agent_id]
-                        tool_counters[agent_id] += 1
-                        tool_run_ids[run_id] = (agent_id, tool_id)
-
-                        args = data.get("input", {})
-                        label = (
-                            args.get("subreddit")
-                            or (f"r/{args['subreddit']}" if args.get("subreddit") else None)
-                            or (args.get("query") or "")[:30]
-                            or name
+                    elif evt == "on_tool_start":
+                        parent_ids = event.get("parent_ids", [])
+                        agent_id = next(
+                            (agent_run_ids[pid] for pid in parent_ids if pid in agent_run_ids),
+                            None,
                         )
+                        if agent_id is not None:
+                            tool_id = tool_counters[agent_id]
+                            tool_counters[agent_id] += 1
+                            tool_run_ids[run_id] = (agent_id, tool_id)
+
+                            args = data.get("input", {})
+                            label = (
+                                args.get("subreddit")
+                                or (f"r/{args['subreddit']}" if args.get("subreddit") else None)
+                                or (args.get("query") or "")[:30]
+                                or name
+                            )
+
+                            yield emit({
+                                "type": "tool_call",
+                                "agentId": agent_id,
+                                "toolId": tool_id,
+                                "label": label,
+                                "status": "active",
+                            })
+
+                    elif evt == "on_tool_end":
+                        if run_id in tool_run_ids:
+                            agent_id, tool_id = tool_run_ids[run_id]
+                            yield emit({
+                                "type": "tool_call",
+                                "agentId": agent_id,
+                                "toolId": tool_id,
+                                "status": "done",
+                            })
+
+                    elif evt == "on_chain_end" and name == "subagent":
+                        if run_id in agent_run_ids:
+                            agent_id = agent_run_ids[run_id]
+                            results = data.get("output", {}).get("results", [])
+                            source_count = sum(len(r.get("sources", [])) for r in results)
+
+                            if results:
+                                await append_findings(db, active_kb_id, new_session_id, results)
+
+                            yield emit({
+                                "type": "agent_done",
+                                "agentId": agent_id,
+                                "sourceCount": source_count,
+                            })
+
+                    elif evt == "on_chain_start" and name == "orchestrator" and data.get("input", {}).get("results"):
+                        inp = data.get("input", {})
+                        if inp.get("refocus") and not inp.get("refocus_dispatched"):
+                            yield emit({"type": "orchestrator_phase", "phase": "thinking"})
+                        else:
+                            yield emit({"type": "orchestrator_phase", "phase": "evaluating"})
+
+                    elif evt == "on_chain_start" and name == "synthesizer":
+                        yield emit({"type": "orchestrator_phase", "phase": "synthesizing"})
+
+                    elif evt == "on_chain_end" and name == "synthesizer":
+                        artifact = data.get("output", {}).get("artifact", "")
+                        duration = round(asyncio.get_event_loop().time() - start, 1)
+
+                        await update_artifact(db, active_kb_id, artifact)
+                        await complete_session(db, new_session_id)
+                        session_completed = True
 
                         yield emit({
-                            "type": "tool_call",
-                            "agentId": agent_id,
-                            "toolId": tool_id,
-                            "label": label,
-                            "status": "active",
+                            "type": "artifact_ready",
+                            "artifact": artifact,
+                            "durationSec": duration,
+                            "kbId": active_kb_id,
                         })
-
-                elif evt == "on_tool_end":
-                    if run_id in tool_run_ids:
-                        agent_id, tool_id = tool_run_ids[run_id]
-                        yield emit({
-                            "type": "tool_call",
-                            "agentId": agent_id,
-                            "toolId": tool_id,
-                            "status": "done",
-                        })
-
-                elif evt == "on_chain_end" and name == "subagent":
-                    if run_id in agent_run_ids:
-                        agent_id = agent_run_ids[run_id]
-                        results = data.get("output", {}).get("results", [])
-                        source_count = sum(len(r.get("sources", [])) for r in results)
-
-                        if results:
-                            await append_findings(db, active_kb_id, new_session_id, results)
-
-                        yield emit({
-                            "type": "agent_done",
-                            "agentId": agent_id,
-                            "sourceCount": source_count,
-                        })
-
-                elif evt == "on_chain_start" and name == "orchestrator" and data.get("input", {}).get("results"):
-                    inp = data.get("input", {})
-                    if inp.get("refocus") and not inp.get("refocus_dispatched"):
-                        yield emit({"type": "orchestrator_phase", "phase": "thinking"})
-                    else:
-                        yield emit({"type": "orchestrator_phase", "phase": "evaluating"})
-
-                elif evt == "on_chain_start" and name == "synthesizer":
-                    yield emit({"type": "orchestrator_phase", "phase": "synthesizing"})
-
-                elif evt == "on_chain_end" and name == "synthesizer":
-                    artifact = data.get("output", {}).get("artifact", "")
-                    duration = round(asyncio.get_event_loop().time() - start, 1)
-
-                    await update_artifact(db, active_kb_id, artifact)
-                    await complete_session(db, new_session_id)
-
-                    yield emit({
-                        "type": "artifact_ready",
-                        "artifact": artifact,
-                        "durationSec": duration,
-                        "kbId": active_kb_id,
-                    })
-                    yield emit({"type": "done"})
+                        yield emit({"type": "done"})
+            except GeneratorExit:
+                pass
+            finally:
+                _running_tasks.pop(new_session_id, None)
+                if not session_completed:
+                    await cancel_session(db, new_session_id)
 
     return EventSourceResponse(generate())
 
