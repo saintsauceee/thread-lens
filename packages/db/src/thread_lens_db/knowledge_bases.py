@@ -59,6 +59,11 @@ async def list_kbs(db: aiosqlite.Connection) -> list[dict]:
     return [dict(r) for r in rows]
 
 
+async def delete_kb(db: aiosqlite.Connection, kb_id: str) -> None:
+    await db.execute("DELETE FROM knowledge_bases WHERE id = ?", (kb_id,))
+    await db.commit()
+
+
 async def update_artifact(db: aiosqlite.Connection, kb_id: str, artifact: str) -> None:
     await db.execute(
         "UPDATE knowledge_bases SET artifact = ?, updated_at = ? WHERE id = ?",

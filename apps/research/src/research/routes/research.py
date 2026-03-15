@@ -14,6 +14,7 @@ from thread_lens_db import (
     create_kb,
     get_kb,
     list_kbs,
+    delete_kb,
     update_artifact,
     append_findings,
     get_findings,
@@ -60,6 +61,13 @@ async def list_kbs_endpoint():
 async def cancel_session_endpoint(session_id: str):
     async with get_db() as db:
         await cancel_session(db, session_id)
+    return {"ok": True}
+
+
+@router.delete("/kb/{kb_id}")
+async def delete_kb_endpoint(kb_id: str):
+    async with get_db() as db:
+        await delete_kb(db, kb_id)
     return {"ok": True}
 
 

@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { HistoryEntry } from '../lib/types';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000';
@@ -31,6 +31,13 @@ export default function ResearchSidebar({
   activeStatus?: 'running' | 'cancelled';
 }) {
   const [entries, setEntries] = useState<HistoryEntry[]>([]);
+  const [hoveredId, setHoveredId] = useState<string | null>(null);
+
+  async function handleDelete(e: React.MouseEvent, id: string) {
+    e.stopPropagation();
+    setEntries((prev) => prev.filter((entry) => entry.id !== id));
+    await fetch(`${API_BASE}/research/kb/${id}`, { method: 'DELETE' }).catch(() => {});
+  }
 
   useEffect(() => {
     fetch(`${API_BASE}/research/kbs`)
@@ -84,35 +91,55 @@ export default function ResearchSidebar({
             const isCancelled = resolvedStatus === 'cancelled';
             const isRunning = resolvedStatus === 'running';
             return (
-              <button
+              <div
                 key={entry.id}
+                role="button"
+                tabIndex={0}
                 onClick={() => onSelect(entry)}
-                className={`w-full text-left px-2 py-2 rounded-md mb-px flex flex-col gap-0.5 transition-colors ${
+                onKeyDown={(e) => e.key === 'Enter' && onSelect(entry)}
+                onMouseEnter={() => setHoveredId(entry.id)}
+                onMouseLeave={() => setHoveredId(null)}
+                className={`w-full text-left px-2 py-2 rounded-md mb-px flex items-start gap-1 transition-colors cursor-pointer ${
                   active ? (isCancelled ? 'bg-red-50' : 'bg-indigo-50') : 'hover:bg-neutral-50'
                 }`}
                 style={{ border: `1px solid ${isRunning ? '#a5b4fc' : isCancelled ? '#fca5a5' : 'transparent'}` }}
               >
-                <span className={`text-[12.5px] leading-snug truncate ${
-                  active ? (isCancelled ? 'text-red-700 font-medium' : 'text-indigo-700 font-medium') : 'text-neutral-600'
-                }`}>
-                  {entry.query}
-                </span>
-                {isRunning ? (
-                  <span className="flex items-center gap-1 text-[11px] text-indigo-400">
-                    <span className="w-1.5 h-1.5 rounded-full bg-indigo-400 animate-pulse inline-block" />
-                    in progress
+                <div className="flex-1 min-w-0 flex flex-col gap-0.5">
+                  <span className={`text-[12.5px] leading-snug truncate ${
+                    active ? (isCancelled ? 'text-red-700 font-medium' : 'text-indigo-700 font-medium') : 'text-neutral-600'
+                  }`}>
+                    {entry.query}
                   </span>
-                ) : isCancelled ? (
-                  <span className="flex items-center gap-1 text-[11px] text-red-400">
-                    <span className="w-1.5 h-1.5 rounded-full bg-red-400 inline-block" />
-                    cancelled
-                  </span>
-                ) : (
-                  <span className={`text-[11px] ${active ? 'text-indigo-400' : 'text-neutral-300'}`}>
-                    {timeAgo(entry.updatedAt)}
-                  </span>
+                  {isRunning ? (
+                    <span className="flex items-center gap-1 text-[11px] text-indigo-400">
+                      <span className="w-1.5 h-1.5 rounded-full bg-indigo-400 animate-pulse inline-block" />
+                      in progress
+                    </span>
+                  ) : isCancelled ? (
+                    <span className="flex items-center gap-1 text-[11px] text-red-400">
+                      <span className="w-1.5 h-1.5 rounded-full bg-red-400 inline-block" />
+                      cancelled
+                    </span>
+                  ) : (
+                    <span className={`text-[11px] ${active ? 'text-indigo-400' : 'text-neutral-300'}`}>
+                      {timeAgo(entry.updatedAt)}
+                    </span>
+                  )}
+                </div>
+                {hoveredId === entry.id && (
+                  <button
+                    onClick={(e) => handleDelete(e, entry.id)}
+                    className="shrink-0 self-center p-1 rounded-md text-neutral-300 hover:text-red-400 hover:bg-red-50 transition-colors"
+                  >
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <polyline points="3 6 5 6 21 6" />
+                      <path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6" />
+                      <path d="M10 11v6M14 11v6" />
+                      <path d="M9 6V4a1 1 0 011-1h4a1 1 0 011 1v2" />
+                    </svg>
+                  </button>
                 )}
-              </button>
+              </div>
             );
           })
         )}
