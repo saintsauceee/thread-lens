@@ -33,9 +33,17 @@ export default function ResearchSidebar({
 }) {
   const [entries, setEntries] = useState<HistoryEntry[]>([]);
   const [hoveredId, setHoveredId] = useState<string | null>(null);
+  const [confirmId, setConfirmId] = useState<string | null>(null);
 
-  async function handleDelete(e: React.MouseEvent, id: string) {
+  function handleDeleteClick(e: React.MouseEvent, id: string) {
     e.stopPropagation();
+    setConfirmId(id);
+  }
+
+  async function confirmDelete() {
+    if (!confirmId) return;
+    const id = confirmId;
+    setConfirmId(null);
     setEntries((prev) => prev.filter((entry) => entry.id !== id));
     toast('Research deleted');
     if (id === currentKbId) onNew();
@@ -129,9 +137,24 @@ export default function ResearchSidebar({
                     </span>
                   )}
                 </div>
-                {hoveredId === entry.id && (
+                {confirmId === entry.id ? (
+                  <div className="shrink-0 self-center flex gap-1" onClick={(e) => e.stopPropagation()}>
+                    <button
+                      onClick={(e) => { e.stopPropagation(); setConfirmId(null); }}
+                      className="text-[10px] font-medium text-neutral-400 hover:text-neutral-600 px-1.5 py-0.5 rounded transition-colors"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      onClick={(e) => { e.stopPropagation(); confirmDelete(); }}
+                      className="text-[10px] font-medium text-white bg-red-500 hover:bg-red-600 px-1.5 py-0.5 rounded transition-colors"
+                    >
+                      Delete
+                    </button>
+                  </div>
+                ) : hoveredId === entry.id && (
                   <button
-                    onClick={(e) => handleDelete(e, entry.id)}
+                    onClick={(e) => handleDeleteClick(e, entry.id)}
                     className="shrink-0 self-center p-1 rounded-md text-neutral-300 hover:text-red-400 hover:bg-red-50 transition-colors"
                   >
                     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
