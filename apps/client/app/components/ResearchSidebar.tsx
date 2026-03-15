@@ -44,14 +44,21 @@ export default function ResearchSidebar({
   return (
     <aside className="w-[260px] shrink-0 h-screen sticky top-0 flex flex-col bg-white" style={{ borderRight: '1px solid #ebebeb' }}>
 
-      {/* New button */}
-      <div className="flex items-center justify-between px-4 py-4">
-        <span className="text-[11px] font-medium text-neutral-400">History</span>
-        <button onClick={onNew} className="text-neutral-300 hover:text-neutral-600 transition-colors">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+      {/* Header */}
+      <div className="px-3 pt-4 pb-3 flex flex-col gap-4">
+        <button
+          onClick={onNew}
+          className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-neutral-600 hover:text-neutral-800 transition-colors"
+          style={{ background: '#f3f4f6', border: '1px solid #e5e7eb' }}
+          onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = '#ebebec'}
+          onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = '#f3f4f6'}
+        >
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="shrink-0">
             <path d="M12 5v14M5 12h14" />
           </svg>
+          <span className="text-[12px] font-medium">New research</span>
         </button>
+        <span className="text-[10.5px] font-medium text-neutral-400 px-1">History</span>
       </div>
 
       {/* Items */}
