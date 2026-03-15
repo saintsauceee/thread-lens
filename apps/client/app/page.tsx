@@ -48,7 +48,7 @@ function LandingView({ onSubmit }: { onSubmit: (q: string, fast: boolean) => voi
   );
 }
 
-function AgentGrid({ agents }: { agents: SubAgent[] }) {
+function AgentGrid({ agents, cancelled }: { agents: SubAgent[]; cancelled?: boolean }) {
   const round1 = agents.filter((a) => a.round === 1);
   const round2 = agents.filter((a) => a.round === 2);
   return (
@@ -56,10 +56,10 @@ function AgentGrid({ agents }: { agents: SubAgent[] }) {
       {round1.length > 0 && (
         <div className="flex gap-3 mb-4">
           <div className="flex flex-col gap-3 flex-1">
-            {round1.filter((_, i) => i % 2 === 0).map((a) => <SubAgentCard key={`${a.id}-${a.dimmed}`} agent={a} />)}
+            {round1.filter((_, i) => i % 2 === 0).map((a) => <SubAgentCard key={`${a.id}-${a.dimmed}`} agent={a} cancelled={cancelled} />)}
           </div>
           <div className="flex flex-col gap-3 flex-1">
-            {round1.filter((_, i) => i % 2 !== 0).map((a) => <SubAgentCard key={`${a.id}-${a.dimmed}`} agent={a} />)}
+            {round1.filter((_, i) => i % 2 !== 0).map((a) => <SubAgentCard key={`${a.id}-${a.dimmed}`} agent={a} cancelled={cancelled} />)}
           </div>
         </div>
       )}
@@ -77,10 +77,10 @@ function AgentGrid({ agents }: { agents: SubAgent[] }) {
           </div>
           <div className="flex gap-3 mb-4">
             <div className="flex flex-col gap-3 flex-1">
-              {round2.filter((_, i) => i % 2 === 0).map((a) => <SubAgentCard key={`${a.id}-${a.dimmed}`} agent={a} />)}
+              {round2.filter((_, i) => i % 2 === 0).map((a) => <SubAgentCard key={`${a.id}-${a.dimmed}`} agent={a} cancelled={cancelled} />)}
             </div>
             <div className="flex flex-col gap-3 flex-1">
-              {round2.filter((_, i) => i % 2 !== 0).map((a) => <SubAgentCard key={`${a.id}-${a.dimmed}`} agent={a} />)}
+              {round2.filter((_, i) => i % 2 !== 0).map((a) => <SubAgentCard key={`${a.id}-${a.dimmed}`} agent={a} cancelled={cancelled} />)}
             </div>
           </div>
         </>
@@ -89,7 +89,7 @@ function AgentGrid({ agents }: { agents: SubAgent[] }) {
   );
 }
 
-function AgentsSection({ agents, previousAgents }: { agents: SubAgent[]; previousAgents: SubAgent[] }) {
+function AgentsSection({ agents, previousAgents, cancelled }: { agents: SubAgent[]; previousAgents: SubAgent[]; cancelled?: boolean }) {
   const [expanded, setExpanded] = useState(true);
   const allAgents = [...previousAgents, ...agents];
   const doneCount = agents.filter((a) => a.status === 'done').length;
@@ -138,7 +138,7 @@ function AgentsSection({ agents, previousAgents }: { agents: SubAgent[]; previou
             </div>
           </>
         )}
-        <AgentGrid agents={agents} />
+        <AgentGrid agents={agents} cancelled={cancelled} />
       </div>
     </div>
   );
@@ -151,6 +151,7 @@ function ResearchView({
   previousAgents,
   report,
   error,
+  cancelled,
   onReset,
   onStop,
   onRefocus,
@@ -161,21 +162,12 @@ function ResearchView({
   previousAgents: SubAgent[];
   report: ReportData | null;
   error: string | null;
+  cancelled: boolean;
   onReset: () => void;
   onStop: () => void;
   onRefocus: (instruction: string) => void;
 }) {
-  const [showRefocusInput, setShowRefocusInput] = useState(false);
-  const [refocusValue, setRefocusValue] = useState('');
-  const isResearching = !report && !error;
-
-  function submitRefocus() {
-    const text = refocusValue.trim();
-    if (!text) return;
-    setRefocusValue('');
-    setShowRefocusInput(false);
-    onRefocus(text);
-  }
+  const isResearching = !report && !error && !cancelled;
 
   return (
     <div className="min-h-screen bg-neutral-50 flex flex-col">
@@ -194,6 +186,13 @@ function ResearchView({
               <span className="w-1.5 h-1.5 rounded-full bg-indigo-500 animate-pulse" />
               Researching…
             </div>
+          ) : cancelled ? (
+            <div className="flex items-center gap-1.5 text-[12px] text-red-500 font-medium">
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M18 6L6 18M6 6l12 12" />
+              </svg>
+              Cancelled
+            </div>
           ) : error ? (
             <div className="text-[12px] text-red-600 font-medium">Failed</div>
           ) : (
@@ -204,22 +203,6 @@ function ResearchView({
               Complete
             </div>
           )}
-          {isResearching && (
-            <>
-              <button
-                onClick={() => { setShowRefocusInput((v) => !v); setRefocusValue(''); }}
-                className="text-[12px] font-semibold bg-violet-600 hover:bg-violet-700 text-white px-3 py-1.5 rounded-lg transition-colors"
-              >
-                Refocus
-              </button>
-              <button
-                onClick={onStop}
-                className="text-[12px] font-medium text-red-500 hover:text-red-700 border border-red-200 hover:border-red-300 px-3 py-1.5 rounded-lg transition-colors"
-              >
-                Stop
-              </button>
-            </>
-          )}
           <button
             onClick={onReset}
             className="text-[12px] font-medium bg-neutral-900 hover:bg-neutral-700 text-white px-3.5 py-1.5 rounded-lg transition-colors"
@@ -229,38 +212,16 @@ function ResearchView({
         </div>
       </div>
 
-      {showRefocusInput && (
-        <div className="sticky top-[57px] z-10 bg-white border-b border-violet-100 px-6 py-3 flex items-center gap-3 shadow-sm">
-          <input
-            autoFocus
-            type="text"
-            value={refocusValue}
-            onChange={(e) => setRefocusValue(e.target.value)}
-            onKeyDown={(e) => { if (e.key === 'Enter') submitRefocus(); if (e.key === 'Escape') setShowRefocusInput(false); }}
-            placeholder="What should the research focus on instead? e.g. focus on budget options, ignore luxury"
-            className="flex-1 px-3.5 py-2 text-[13px] rounded-lg border border-violet-200 bg-violet-50 focus:outline-none focus:ring-2 focus:ring-violet-400 focus:border-transparent text-neutral-800 placeholder:text-neutral-400 transition-all"
-          />
-          <button
-            onClick={submitRefocus}
-            disabled={!refocusValue.trim()}
-            className="text-[12px] font-semibold bg-violet-600 hover:bg-violet-700 disabled:opacity-40 text-white px-4 py-2 rounded-lg transition-colors"
-          >
-            Refocus
-          </button>
-          <button
-            onClick={() => setShowRefocusInput(false)}
-            className="text-[12px] font-medium text-neutral-400 hover:text-neutral-600 transition-colors"
-          >
-            Cancel
-          </button>
-        </div>
-      )}
-
       <div className="flex-1 max-w-4xl mx-auto w-full px-6 py-8">
-        <OrchestratorCard phase={orchestratorPhase} />
+        <OrchestratorCard
+          phase={orchestratorPhase}
+          isResearching={isResearching}
+          onStop={onStop}
+          onRefocus={onRefocus}
+        />
 
         {(agents.length > 0 || previousAgents.length > 0) && (
-          <AgentsSection agents={agents} previousAgents={previousAgents} />
+          <AgentsSection agents={agents} previousAgents={previousAgents} cancelled={cancelled} />
         )}
 
         {report && <ResearchReport report={report} />}
@@ -381,6 +342,7 @@ export default function Home() {
   const [previousAgents, setPreviousAgents] = useState<SubAgent[]>([]);
   const [report, setReport] = useState<ReportData | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [cancelled, setCancelled] = useState(false);
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [refocusData, setRefocusData] = useState<{ sid: string; instruction: string } | null>(null);
   const [streamVersion, setStreamVersion] = useState(0);
@@ -410,6 +372,7 @@ export default function Home() {
     setPreviousAgents([]);
     setReport(null);
     setError(null);
+    setCancelled(false);
     setSessionId(null);
     setRefocusData(null);
     setStreamVersion(0);
@@ -417,8 +380,7 @@ export default function Home() {
 
   function handleStop() {
     esRef.current?.close();
-    setAppPhase('idle');
-    handleReset();
+    setCancelled(true);
   }
 
   function handleRefocus(instruction: string) {
@@ -553,6 +515,7 @@ export default function Home() {
       previousAgents={previousAgents}
       report={report}
       error={error}
+      cancelled={cancelled}
       onReset={handleReset}
       onStop={handleStop}
       onRefocus={handleRefocus}

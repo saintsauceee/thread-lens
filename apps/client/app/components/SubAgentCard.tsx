@@ -27,7 +27,7 @@ function ToolPill({ subreddit: label, status }: { subreddit: string; status: Too
   );
 }
 
-export default function SubAgentCard({ agent }: { agent: SubAgent }) {
+export default function SubAgentCard({ agent, cancelled }: { agent: SubAgent; cancelled?: boolean }) {
   const { status, task, sourceCount, id, toolCalls, dimmed } = agent;
   const [visible, setVisible] = useState(false);
   const [collapsed, setCollapsed] = useState(true);
@@ -43,6 +43,8 @@ export default function SubAgentCard({ agent }: { agent: SubAgent }) {
       className={`rounded-xl border transition-all duration-500 ${
         dimmed
           ? 'border-neutral-200 bg-neutral-50'
+          : cancelled && !isDone
+          ? 'border-red-200 bg-white shadow-sm shadow-red-100'
           : isDone
           ? 'border-emerald-200 bg-white shadow-sm shadow-emerald-100'
           : 'border-indigo-200 bg-white shadow-sm shadow-indigo-100'
@@ -68,6 +70,13 @@ export default function SubAgentCard({ agent }: { agent: SubAgent }) {
         <div className="flex items-center gap-1.5 shrink-0 ml-2">
           {dimmed ? (
             <span className="text-[11px] font-medium text-neutral-400">Refocused</span>
+          ) : cancelled && !isDone ? (
+            <>
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="text-red-400">
+                <path d="M18 6L6 18M6 6l12 12" />
+              </svg>
+              <span className="text-[11px] font-medium text-red-400">Cancelled</span>
+            </>
           ) : isDone ? (
             <>
               <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="text-emerald-500">
