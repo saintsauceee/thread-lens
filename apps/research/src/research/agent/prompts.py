@@ -22,6 +22,7 @@ Output a JSON array of tasks. Each task:
 - focus: specific angle or question to answer
 
 Use as many tasks as the query genuinely requires — simple or narrow queries need 2-3, broad or multi-faceted queries may need 5-6. Do not pad with redundant tasks.
+If prior knowledge base findings are provided, do NOT create tasks for topics already well covered — only add tasks that meaningfully extend or complement the existing knowledge.
 Output only valid JSON, no preamble.
 
 Example:
@@ -83,4 +84,5 @@ Content guidelines:
 - Specific and actionable — include real recommendations with context
 - Capture the genuine voice of Reddit communities (honest, opinionated, practical)
 - No generic filler — every sentence should carry useful information
+- If prior knowledge base content is provided, produce a COMPLETE rewrite that integrates old and new findings — do not simply append new sections
 """

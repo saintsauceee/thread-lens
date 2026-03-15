@@ -5,6 +5,7 @@ import SearchInput from './components/SearchInput';
 import OrchestratorCard from './components/OrchestratorCard';
 import SubAgentCard from './components/SubAgentCard';
 import ResearchReport from './components/ResearchReport';
+import FollowUpInput from './components/FollowUpInput';
 import {
   AppPhase,
   OrchestratorPhase,
@@ -155,6 +156,7 @@ function ResearchView({
   onReset,
   onStop,
   onRefocus,
+  onFollowUp,
 }: {
   query: string;
   orchestratorPhase: OrchestratorPhase;
@@ -166,6 +168,7 @@ function ResearchView({
   onReset: () => void;
   onStop: () => void;
   onRefocus: (instruction: string) => void;
+  onFollowUp: (question: string) => void;
 }) {
   const isResearching = !report && !error && !cancelled;
 
@@ -203,6 +206,7 @@ function ResearchView({
         )}
 
         {report && <ResearchReport report={report} />}
+        {report && !isResearching && <FollowUpInput onSubmit={onFollowUp} />}
       </div>
     </div>
   );
@@ -322,6 +326,8 @@ export default function Home() {
   const [error, setError] = useState<string | null>(null);
   const [cancelled, setCancelled] = useState(false);
   const [sessionId, setSessionId] = useState<string | null>(null);
+  const [kbId, setKbId] = useState<string | null>(null);
+  const [followUp, setFollowUp] = useState<string | null>(null);
   const [refocusData, setRefocusData] = useState<{ sid: string; instruction: string } | null>(null);
   const [streamVersion, setStreamVersion] = useState(0);
   const esRef = useRef<EventSource | null>(null);
@@ -352,13 +358,27 @@ export default function Home() {
     setError(null);
     setCancelled(false);
     setSessionId(null);
+    setKbId(null);
+    setFollowUp(null);
     setRefocusData(null);
     setStreamVersion(0);
+    localStorage.removeItem('thread_lens_kb');
   }
 
   function handleStop() {
     esRef.current?.close();
     setCancelled(true);
+  }
+
+  function handleFollowUp(question: string) {
+    setPreviousAgents((prev) => [...prev, ...agents.map((a) => ({ ...a, status: 'done' as const, dimmed: true }))]);
+    setAgents([]);
+    setReport(null);
+    setCancelled(false);
+    setOrchestratorPhase('thinking');
+    setFollowUp(question);
+    setStreamVersion((v) => v + 1);
+    setAppPhase('researching');
   }
 
   function handleRefocus(instruction: string) {
@@ -382,6 +402,10 @@ export default function Home() {
       params.set('refocus', refocusData.instruction);
       params.set('session_id', refocusData.sid);
     }
+    if (kbId && followUp) {
+      params.set('kb_id', kbId);
+      params.set('follow_up', followUp);
+    }
 
     const es = new EventSource(`${API_BASE}/research/stream?${params}`);
     esRef.current = es;
@@ -390,6 +414,11 @@ export default function Home() {
       const event = JSON.parse(e.data);
 
       switch (event.type) {
+        case 'kb_id':
+          setKbId(event.id);
+          localStorage.setItem('thread_lens_kb', JSON.stringify({ id: event.id, query }));
+          break;
+
         case 'session_id':
           setSessionId(event.id);
           break;
@@ -497,6 +526,7 @@ export default function Home() {
       onReset={handleReset}
       onStop={handleStop}
       onRefocus={handleRefocus}
+      onFollowUp={handleFollowUp}
     />
   );
 }
