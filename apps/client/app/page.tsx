@@ -8,6 +8,7 @@ import ResearchArtifact from './components/ResearchArtifact';
 import FollowUpInput from './components/FollowUpInput';
 import HistoryMenu from './components/HistoryMenu';
 import ResearchSidebar from './components/ResearchSidebar';
+import ToastContainer from './components/Toast';
 import {
   AppPhase,
   OrchestratorPhase,
@@ -565,6 +566,7 @@ export default function Home() {
       <>
         <HistoryMenu open={historyMenuOpen} onClose={() => setHistoryMenuOpen(false)} onSelect={handleHistorySelect} currentKbId={kbId} />
         <LandingView onSubmit={handleSubmit} onHistorySelect={handleHistorySelect} onNew={handleReset} currentKbId={kbId} sidebarRefreshKey={sidebarRefreshKey} />
+        <ToastContainer />
       </>
     );
   }
@@ -583,6 +585,7 @@ export default function Home() {
           currentKbId={kbId}
           sidebarRefreshKey={sidebarRefreshKey}
         />
+        <ToastContainer />
       </>
     );
   }
@@ -610,6 +613,7 @@ export default function Home() {
         onFollowUp={handleFollowUp}
         onHistorySelect={handleHistorySelect}
       />
+      <ToastContainer />
     </>
   );
 }

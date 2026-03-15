@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { HistoryEntry } from '../lib/types';
+import { toast } from './Toast';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000';
 
@@ -36,6 +37,7 @@ export default function ResearchSidebar({
   async function handleDelete(e: React.MouseEvent, id: string) {
     e.stopPropagation();
     setEntries((prev) => prev.filter((entry) => entry.id !== id));
+    toast('Research deleted');
     await fetch(`${API_BASE}/research/kb/${id}`, { method: 'DELETE' }).catch(() => {});
   }
 
