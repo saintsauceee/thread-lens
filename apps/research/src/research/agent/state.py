@@ -27,11 +27,11 @@ class ResearchState(TypedDict):
     refocus_dispatched: bool
     kb_id: str
     kb_existing_results: list[SubagentResult]
-    kb_existing_report: str
+    kb_existing_artifact: str
     follow_up: str
     tasks: list[ResearchTask]
     current_task: ResearchTask
     results: Annotated[list[SubagentResult], operator.add]
     gaps: list[str]
-    report: str
+    artifact: str
     round: int

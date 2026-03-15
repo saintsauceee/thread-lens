@@ -1,12 +1,21 @@
 from dotenv import load_dotenv
 load_dotenv()
 
+from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from research.routes import research
+from thread_lens_db import init_db
 
-app = FastAPI(title="Thread Lens Research API")
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    await init_db()
+    yield
+
+
+app = FastAPI(title="Thread Lens Research API", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,

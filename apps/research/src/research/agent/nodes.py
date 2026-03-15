@@ -165,7 +165,7 @@ async def subagent_node(state: ResearchState) -> dict:
     else:
         raise last_exc  # type: ignore[misc]
 
-    findings = result["messages"][-1].content
+    findings = _content_text(result["messages"][-1].content)
 
     sources: list[str] = []
     for msg in result["messages"]:
@@ -212,8 +212,8 @@ async def synthesizer_node(state: ResearchState) -> dict:
         model_name,
     )
 
-    report = _content_text(response.content)
+    artifact = _content_text(response.content)
     if all_sources:
-        report += "\n\n## Sources\n" + "\n".join(f"- {s}" for s in all_sources)
+        artifact += "\n\n## Sources\n" + "\n".join(f"- {s}" for s in all_sources)
 
-    return {"report": report}
+    return {"artifact": artifact}
