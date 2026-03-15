@@ -1,7 +1,7 @@
 from .connection import init_db, get_db
 from .knowledge_bases import create_kb, get_kb, list_kbs, update_artifact
 from .findings import append_findings, get_findings, get_session_findings
-from .sessions import create_session, complete_session, get_sessions
+from .sessions import create_session, complete_session, cancel_session, get_sessions
 
 __all__ = [
     "init_db",
@@ -15,5 +15,6 @@ __all__ = [
     "get_session_findings",
     "create_session",
     "complete_session",
+    "cancel_session",
     "get_sessions",
 ]

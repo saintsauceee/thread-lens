@@ -19,15 +19,41 @@ async def create_kb(db: aiosqlite.Connection, query: str) -> dict:
 
 
 async def get_kb(db: aiosqlite.Connection, kb_id: str) -> dict | None:
-    async with db.execute("SELECT * FROM knowledge_bases WHERE id = ?", (kb_id,)) as cur:
+    async with db.execute(
+        """
+        SELECT kb.*,
+            CASE
+                WHEN kb.artifact != '' THEN 'complete'
+                WHEN s.cancelled_at IS NOT NULL THEN 'cancelled'
+                ELSE 'incomplete'
+            END AS status
+        FROM knowledge_bases kb
+        LEFT JOIN sessions s ON s.id = (
+            SELECT id FROM sessions WHERE kb_id = kb.id ORDER BY created_at DESC LIMIT 1
+        )
+        WHERE kb.id = ?
+        """,
+        (kb_id,),
+    ) as cur:
         row = await cur.fetchone()
     return dict(row) if row else None
 
 
 async def list_kbs(db: aiosqlite.Connection) -> list[dict]:
     async with db.execute(
-        "SELECT id, query, updated_at, substr(artifact, 1, 200) AS artifact_preview "
-        "FROM knowledge_bases ORDER BY updated_at DESC"
+        """
+        SELECT kb.id, kb.query, kb.updated_at, substr(kb.artifact, 1, 200) AS artifact_preview,
+            CASE
+                WHEN kb.artifact != '' THEN 'complete'
+                WHEN s.cancelled_at IS NOT NULL THEN 'cancelled'
+                ELSE 'incomplete'
+            END AS status
+        FROM knowledge_bases kb
+        LEFT JOIN sessions s ON s.id = (
+            SELECT id FROM sessions WHERE kb_id = kb.id ORDER BY created_at DESC LIMIT 1
+        )
+        ORDER BY kb.updated_at DESC
+        """
     ) as cur:
         rows = await cur.fetchall()
     return [dict(r) for r in rows]

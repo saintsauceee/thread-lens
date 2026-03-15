@@ -35,8 +35,8 @@ export default function ResearchSidebar({
   useEffect(() => {
     fetch(`${API_BASE}/research/kbs`)
       .then((r) => r.json())
-      .then((data: { id: string; query: string; updated_at: string }[]) => {
-        setEntries(data.map((d) => ({ id: d.id, query: d.query, updatedAt: d.updated_at })));
+      .then((data: { id: string; query: string; updated_at: string; status?: string }[]) => {
+        setEntries(data.map((d) => ({ id: d.id, query: d.query, updatedAt: d.updated_at, status: d.status as HistoryEntry['status'] })));
       })
       .catch(() => {});
   }, [refreshKey]);
@@ -80,22 +80,29 @@ export default function ResearchSidebar({
         ) : (
           entries.map((entry) => {
             const active = entry.id === currentKbId;
+            const resolvedStatus = active ? (activeStatus ?? (entry.status === 'cancelled' ? 'cancelled' : undefined)) : entry.status;
+            const isCancelled = resolvedStatus === 'cancelled';
+            const isRunning = resolvedStatus === 'running';
             return (
               <button
                 key={entry.id}
                 onClick={() => onSelect(entry)}
-                className={`w-full text-left px-2 py-2 rounded-md mb-px flex flex-col gap-0.5 transition-colors ${active ? 'bg-indigo-50' : 'hover:bg-neutral-50'}`}
-                style={{ border: `1px solid ${active && activeStatus === 'running' ? '#a5b4fc' : active && activeStatus === 'cancelled' ? '#fca5a5' : 'transparent'}` }}
+                className={`w-full text-left px-2 py-2 rounded-md mb-px flex flex-col gap-0.5 transition-colors ${
+                  active ? (isCancelled ? 'bg-red-50' : 'bg-indigo-50') : 'hover:bg-neutral-50'
+                }`}
+                style={{ border: `1px solid ${isRunning ? '#a5b4fc' : isCancelled ? '#fca5a5' : 'transparent'}` }}
               >
-                <span className={`text-[12.5px] leading-snug truncate ${active ? 'text-indigo-700 font-medium' : 'text-neutral-600'}`}>
+                <span className={`text-[12.5px] leading-snug truncate ${
+                  active ? (isCancelled ? 'text-red-700 font-medium' : 'text-indigo-700 font-medium') : 'text-neutral-600'
+                }`}>
                   {entry.query}
                 </span>
-                {active && activeStatus === 'running' ? (
+                {isRunning ? (
                   <span className="flex items-center gap-1 text-[11px] text-indigo-400">
                     <span className="w-1.5 h-1.5 rounded-full bg-indigo-400 animate-pulse inline-block" />
                     in progress
                   </span>
-                ) : active && activeStatus === 'cancelled' ? (
+                ) : isCancelled ? (
                   <span className="flex items-center gap-1 text-[11px] text-red-400">
                     <span className="w-1.5 h-1.5 rounded-full bg-red-400 inline-block" />
                     cancelled

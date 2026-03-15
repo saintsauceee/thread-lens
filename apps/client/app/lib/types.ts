@@ -30,4 +30,5 @@ export interface HistoryEntry {
   id: string;
   query: string;
   updatedAt: string;
+  status?: 'complete' | 'cancelled' | 'incomplete';
 }

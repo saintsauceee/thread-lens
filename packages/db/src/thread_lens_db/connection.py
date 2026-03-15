@@ -38,7 +38,11 @@ CREATE INDEX IF NOT EXISTS sessions_kb_id ON sessions(kb_id);
 async def init_db() -> None:
     async with aiosqlite.connect(DB_PATH) as db:
         await db.executescript(_SCHEMA)
-        await db.commit()
+        try:
+            await db.execute("ALTER TABLE sessions ADD COLUMN cancelled_at TEXT")
+            await db.commit()
+        except Exception:
+            pass
 
 
 @asynccontextmanager

@@ -165,10 +165,10 @@ function ResearchView({
   agents,
   previousAgents,
   artifact,
-  error,
   cancelled,
   kbId,
   sidebarRefreshKey,
+  activeStatus,
   onReset,
   onStop,
   onRefocus,
@@ -179,17 +179,17 @@ function ResearchView({
   agents: SubAgent[];
   previousAgents: SubAgent[];
   artifact: ArtifactData | null;
-  error: string | null;
   cancelled: boolean;
   kbId: string | null;
   sidebarRefreshKey: number;
+  activeStatus: 'running' | 'cancelled' | undefined;
   onReset: () => void;
   onStop: () => void;
   onRefocus: (instruction: string) => void;
   onFollowUp: (question: string) => void;
   onHistorySelect: (entry: HistoryEntry) => void;
 }) {
-  const isResearching = !artifact && !error && !cancelled;
+  const isResearching = activeStatus === 'running';
 
   return (
     <div className="min-h-screen flex bg-white">
@@ -198,7 +198,7 @@ function ResearchView({
         onSelect={onHistorySelect}
         onNew={onReset}
         refreshKey={sidebarRefreshKey}
-        activeStatus={cancelled ? 'cancelled' : isResearching ? 'running' : undefined}
+        activeStatus={activeStatus}
       />
 
       <div className="flex-1 flex flex-col min-w-0 bg-neutral-50">
@@ -206,6 +206,7 @@ function ResearchView({
           <OrchestratorCard
             phase={orchestratorPhase}
             isResearching={isResearching}
+            cancelled={cancelled}
             onStop={onStop}
             onRefocus={onRefocus}
           />
@@ -344,7 +345,6 @@ export default function Home() {
   const [agents, setAgents] = useState<SubAgent[]>([]);
   const [previousAgents, setPreviousAgents] = useState<SubAgent[]>([]);
   const [artifact, setArtifact] = useState<ArtifactData | null>(null);
-  const [error, setError] = useState<string | null>(null);
   const [cancelled, setCancelled] = useState(false);
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [kbId, setKbId] = useState<string | null>(null);
@@ -367,18 +367,20 @@ export default function Home() {
   }, []);
 
   async function handleHistorySelect(entry: HistoryEntry) {
+    esRef.current?.close();
     try {
       const res = await fetch(`${API_BASE}/research/kb/${entry.id}`);
       if (!res.ok) return;
       const kb = await res.json();
+      const wasCancelled = kb.status === 'cancelled';
       setQuery(kb.query);
       setKbId(kb.id);
       setAgents([]);
       setPreviousAgents([]);
-      setCancelled(false);
-      setError(null);
+      setCancelled(wasCancelled);
+
       setOrchestratorPhase('done');
-      setArtifact({ rawMarkdown: kb.artifact });
+      setArtifact(kb.artifact ? { rawMarkdown: kb.artifact } : null);
       setAppPhase('complete');
     } catch {}
   }
@@ -388,7 +390,6 @@ export default function Home() {
     setFast(fastMode);
     setAgents([]);
     setArtifact(null);
-    setError(null);
     setOrchestratorPhase('thinking');
     setAppPhase('clarifying');
   }
@@ -406,7 +407,6 @@ export default function Home() {
     setAgents([]);
     setPreviousAgents([]);
     setArtifact(null);
-    setError(null);
     setCancelled(false);
     setSessionId(null);
     setKbId(null);
@@ -419,6 +419,11 @@ export default function Home() {
   function handleStop() {
     esRef.current?.close();
     setCancelled(true);
+    if (sessionId) {
+      fetch(`${API_BASE}/research/session/${sessionId}/cancel`, { method: 'POST' })
+        .then(() => setSidebarRefreshKey((k) => k + 1))
+        .catch(() => {});
+    }
   }
 
   function handleFollowUp(question: string) {
@@ -592,10 +597,10 @@ export default function Home() {
         agents={agents}
         previousAgents={previousAgents}
         artifact={artifact}
-        error={error}
         cancelled={cancelled}
         kbId={kbId}
         sidebarRefreshKey={sidebarRefreshKey}
+        activeStatus={cancelled ? 'cancelled' : appPhase === 'researching' ? 'running' : undefined}
         onReset={handleReset}
         onStop={handleStop}
         onRefocus={handleRefocus}

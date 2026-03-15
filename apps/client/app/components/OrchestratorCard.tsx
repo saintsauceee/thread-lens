@@ -14,15 +14,19 @@ const PHASE_CONFIG: Record<OrchestratorPhase, { label: string; color: string }> 
 export default function OrchestratorCard({
   phase,
   isResearching,
+  cancelled,
   onStop,
   onRefocus,
 }: {
   phase: OrchestratorPhase;
   isResearching?: boolean;
+  cancelled?: boolean;
   onStop?: () => void;
   onRefocus?: (instruction: string) => void;
 }) {
-  const { label, color } = PHASE_CONFIG[phase];
+  const { label, color } = cancelled
+    ? { label: 'Cancelled', color: 'text-red-400' }
+    : PHASE_CONFIG[phase];
   const [showRefocus, setShowRefocus] = useState(false);
   const [refocusValue, setRefocusValue] = useState('');
 
@@ -45,19 +49,21 @@ export default function OrchestratorCard({
           </div>
           <p className="text-sm font-semibold text-neutral-900">Orchestrator</p>
           <div className={`flex items-center gap-1.5 text-[12px] font-medium transition-all duration-500 ${color}`}>
-            {phase === 'thinking' && (
+            {cancelled ? (
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M18 6L6 18M6 6l12 12" />
+              </svg>
+            ) : phase === 'thinking' ? (
               <span className="flex gap-0.5">
                 <span className="w-1 h-1 rounded-full bg-current animate-bounce" style={{ animationDelay: '0ms' }} />
                 <span className="w-1 h-1 rounded-full bg-current animate-bounce" style={{ animationDelay: '150ms' }} />
                 <span className="w-1 h-1 rounded-full bg-current animate-bounce" style={{ animationDelay: '300ms' }} />
               </span>
-            )}
-            {phase === 'done' && (
+            ) : phase === 'done' ? (
               <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M20 6L9 17l-5-5" />
               </svg>
-            )}
-            {phase !== 'thinking' && phase !== 'done' && (
+            ) : (
               <span className="w-1.5 h-1.5 rounded-full bg-current animate-pulse" />
             )}
             {label}
