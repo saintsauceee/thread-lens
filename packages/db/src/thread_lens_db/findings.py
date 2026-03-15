@@ -24,6 +24,18 @@ async def append_findings(
     await db.commit()
 
 
+async def get_session_findings(db: aiosqlite.Connection, session_id: str) -> list[dict]:
+    async with db.execute(
+        "SELECT topic, findings, sources FROM findings WHERE session_id = ? ORDER BY id",
+        (session_id,),
+    ) as cur:
+        rows = await cur.fetchall()
+    return [
+        {"topic": r["topic"], "findings": r["findings"], "sources": json.loads(r["sources"])}
+        for r in rows
+    ]
+
+
 async def get_findings(db: aiosqlite.Connection, kb_id: str) -> list[dict]:
     async with db.execute(
         "SELECT topic, findings, sources FROM findings WHERE kb_id = ? ORDER BY id",

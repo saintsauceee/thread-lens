@@ -1,9 +1,10 @@
+import os
 import aiosqlite
 from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import AsyncIterator
 
-DB_PATH = Path(__file__).parent.parent.parent.parent / "thread_lens.db"
+DB_PATH = Path(os.environ.get("THREAD_LENS_DB_PATH", "thread_lens.db"))
 
 _SCHEMA = """
 CREATE TABLE IF NOT EXISTS knowledge_bases (

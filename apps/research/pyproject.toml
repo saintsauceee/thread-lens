@@ -26,6 +26,9 @@ build-backend = "hatchling.build"
 [tool.hatch.build.targets.wheel]
 packages = ["src/research"]
 
+[tool.uv.sources]
+thread-lens-db = { path = "../../packages/db", editable = true }
+
 [dependency-groups]
 dev = [
     "pytest>=8.0.0",
