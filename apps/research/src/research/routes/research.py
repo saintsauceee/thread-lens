@@ -13,6 +13,7 @@ from thread_lens_db import (
     get_db,
     create_kb,
     get_kb,
+    list_kbs,
     update_artifact,
     append_findings,
     get_findings,
@@ -46,6 +47,12 @@ _INITIAL_STATE = lambda query, fast=False, clarifications=None, partial_results=
 async def clarify(query: str, fast: bool = False):
     questions = await clarify_query(query, fast)
     return {"questions": questions}
+
+
+@router.get("/kbs")
+async def list_kbs_endpoint():
+    async with get_db() as db:
+        return await list_kbs(db)
 
 
 @router.get("/kb/{kb_id}")

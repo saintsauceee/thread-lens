@@ -6,6 +6,8 @@ import OrchestratorCard from './components/OrchestratorCard';
 import SubAgentCard from './components/SubAgentCard';
 import ResearchArtifact from './components/ResearchArtifact';
 import FollowUpInput from './components/FollowUpInput';
+import HistoryMenu from './components/HistoryMenu';
+import ResearchSidebar from './components/ResearchSidebar';
 import {
   AppPhase,
   OrchestratorPhase,
@@ -18,67 +20,46 @@ const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000';
 
 // ── Landing ───────────────────────────────────────────────────────────────────
 
-function timeAgo(iso: string): string {
-  const diff = Date.now() - new Date(iso).getTime();
-  const mins = Math.floor(diff / 60000);
-  if (mins < 60) return mins <= 1 ? 'just now' : `${mins}m ago`;
-  const hrs = Math.floor(mins / 60);
-  if (hrs < 24) return `${hrs}h ago`;
-  const days = Math.floor(hrs / 24);
-  return days === 1 ? 'yesterday' : `${days}d ago`;
-}
-
 function LandingView({
   onSubmit,
-  history,
   onHistorySelect,
+  onNew,
+  currentKbId,
+  sidebarRefreshKey,
 }: {
   onSubmit: (q: string, fast: boolean) => void;
-  history: HistoryEntry[];
   onHistorySelect: (entry: HistoryEntry) => void;
+  onNew: () => void;
+  currentKbId: string | null;
+  sidebarRefreshKey: number;
 }) {
   return (
-    <div className="h-screen bg-white flex flex-col items-center justify-center gap-8 px-4">
-      <div className="relative">
-        <div
-          className="absolute -inset-10 rounded-full blur-3xl pointer-events-none"
-          style={{ background: 'radial-gradient(circle, rgba(99,102,241,0.22) 0%, transparent 70%)' }}
-        />
-        <div
-          className="relative w-[72px] h-[72px] rounded-[22px] bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center"
-          style={{ boxShadow: '0 0 48px rgba(99,102,241,0.45), 0 8px 32px rgba(0,0,0,0.3)' }}
-        >
-          <svg width="30" height="30" viewBox="0 0 24 24" fill="currentColor" className="text-white">
-            <path d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 00-2.456 2.456zM16.894 20.567L16.5 21.75l-.394-1.183a2.25 2.25 0 00-1.423-1.423L13.5 18.75l1.183-.394a2.25 2.25 0 001.423-1.423l.394-1.183.394 1.183a2.25 2.25 0 001.423 1.423l1.183.394-1.183.394a2.25 2.25 0 00-1.423 1.423z" />
-          </svg>
-        </div>
-      </div>
-
-      <h1
-        className="text-[28px] font-semibold tracking-tight bg-clip-text text-transparent"
-        style={{ backgroundImage: 'linear-gradient(135deg, #4338ca 0%, #1e1b4b 45%, #6d28d9 100%)' }}
-      >
-        What do you want?
-      </h1>
-
-      <div className="w-full flex flex-col gap-4" style={{ maxWidth: '720px' }}>
-        <SearchInput onSubmit={onSubmit} />
-
-        {history.length > 0 && (
-          <div className="flex flex-col gap-1">
-            <p className="text-[11px] font-semibold uppercase tracking-widest text-neutral-400 px-1 mb-1">Recent</p>
-            {history.map((entry) => (
-              <button
-                key={entry.id}
-                onClick={() => onHistorySelect(entry)}
-                className="flex items-center justify-between gap-4 px-3.5 py-2.5 rounded-xl hover:bg-neutral-50 border border-transparent hover:border-neutral-200 transition-all text-left group"
-              >
-                <span className="text-[13px] text-neutral-700 truncate group-hover:text-neutral-900">{entry.query}</span>
-                <span className="text-[11px] text-neutral-400 shrink-0">{timeAgo(entry.updatedAt)}</span>
-              </button>
-            ))}
+    <div className="min-h-screen flex bg-white">
+      <ResearchSidebar currentKbId={currentKbId} onSelect={onHistorySelect} onNew={onNew} refreshKey={sidebarRefreshKey} />
+      <div className="flex-1 flex flex-col items-center justify-center gap-8 px-6 bg-neutral-50">
+        <div className="relative">
+          <div
+            className="absolute -inset-10 rounded-full blur-3xl pointer-events-none"
+            style={{ background: 'radial-gradient(circle, rgba(99,102,241,0.22) 0%, transparent 70%)' }}
+          />
+          <div
+            className="relative w-[72px] h-[72px] rounded-[22px] bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center"
+            style={{ boxShadow: '0 0 48px rgba(99,102,241,0.45), 0 8px 32px rgba(0,0,0,0.3)' }}
+          >
+            <svg width="30" height="30" viewBox="0 0 24 24" fill="currentColor" className="text-white">
+              <path d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 00-2.456 2.456zM16.894 20.567L16.5 21.75l-.394-1.183a2.25 2.25 0 00-1.423-1.423L13.5 18.75l1.183-.394a2.25 2.25 0 001.423-1.423l.394-1.183.394 1.183a2.25 2.25 0 001.423 1.423l1.183.394-1.183.394a2.25 2.25 0 00-1.423 1.423z" />
+            </svg>
           </div>
-        )}
+        </div>
+        <h1
+          className="text-[28px] font-semibold tracking-tight bg-clip-text text-transparent"
+          style={{ backgroundImage: 'linear-gradient(135deg, #4338ca 0%, #1e1b4b 45%, #6d28d9 100%)' }}
+        >
+          What do you want?
+        </h1>
+        <div className="w-full" style={{ maxWidth: '720px' }}>
+          <SearchInput onSubmit={onSubmit} />
+        </div>
       </div>
     </div>
   );
@@ -127,7 +108,6 @@ function AgentGrid({ agents, cancelled }: { agents: SubAgent[]; cancelled?: bool
 
 function AgentsSection({ agents, previousAgents, cancelled }: { agents: SubAgent[]; previousAgents: SubAgent[]; cancelled?: boolean }) {
   const [expanded, setExpanded] = useState(true);
-  const allAgents = [...previousAgents, ...agents];
   const doneCount = agents.filter((a) => a.status === 'done').length;
 
   return (
@@ -181,67 +161,62 @@ function AgentsSection({ agents, previousAgents, cancelled }: { agents: SubAgent
 }
 
 function ResearchView({
-  query,
   orchestratorPhase,
   agents,
   previousAgents,
   artifact,
   error,
   cancelled,
+  kbId,
+  sidebarRefreshKey,
   onReset,
   onStop,
   onRefocus,
   onFollowUp,
+  onHistorySelect,
 }: {
-  query: string;
   orchestratorPhase: OrchestratorPhase;
   agents: SubAgent[];
   previousAgents: SubAgent[];
   artifact: ArtifactData | null;
   error: string | null;
   cancelled: boolean;
+  kbId: string | null;
+  sidebarRefreshKey: number;
   onReset: () => void;
   onStop: () => void;
   onRefocus: (instruction: string) => void;
   onFollowUp: (question: string) => void;
+  onHistorySelect: (entry: HistoryEntry) => void;
 }) {
   const isResearching = !artifact && !error && !cancelled;
 
   return (
-    <div className="min-h-screen bg-neutral-50 flex flex-col">
-      <div className="sticky top-0 z-10 bg-white/90 backdrop-blur border-b border-neutral-100 px-6 py-3.5 flex items-center justify-between shadow-sm">
-        <div className="flex items-center gap-3 min-w-0">
-          <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center shrink-0 shadow-sm">
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" className="text-white">
-              <path d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09z" />
-            </svg>
-          </div>
-          <p className="text-sm text-neutral-800 font-semibold truncate">{query}</p>
+    <div className="min-h-screen flex bg-white">
+      <ResearchSidebar
+        currentKbId={kbId}
+        onSelect={onHistorySelect}
+        onNew={onReset}
+        refreshKey={sidebarRefreshKey}
+        activeIsRunning={isResearching}
+      />
+
+      <div className="flex-1 flex flex-col min-w-0 bg-neutral-50">
+        <div className="flex-1 max-w-3xl mx-auto w-full px-8 py-8">
+          <OrchestratorCard
+            phase={orchestratorPhase}
+            isResearching={isResearching}
+            onStop={onStop}
+            onRefocus={onRefocus}
+          />
+
+          {(agents.length > 0 || previousAgents.length > 0) && (
+            <AgentsSection agents={agents} previousAgents={previousAgents} cancelled={cancelled} />
+          )}
+
+          {artifact && <ResearchArtifact artifact={artifact} />}
+          {artifact && !isResearching && <FollowUpInput onSubmit={onFollowUp} />}
         </div>
-        <div className="flex items-center gap-3 shrink-0 ml-4">
-          <button
-            onClick={onReset}
-            className="text-[12px] font-medium bg-neutral-900 hover:bg-neutral-700 text-white px-3.5 py-1.5 rounded-lg transition-colors"
-          >
-            New research
-          </button>
-        </div>
-      </div>
-
-      <div className="flex-1 max-w-4xl mx-auto w-full px-6 py-8">
-        <OrchestratorCard
-          phase={orchestratorPhase}
-          isResearching={isResearching}
-          onStop={onStop}
-          onRefocus={onRefocus}
-        />
-
-        {(agents.length > 0 || previousAgents.length > 0) && (
-          <AgentsSection agents={agents} previousAgents={previousAgents} cancelled={cancelled} />
-        )}
-
-        {artifact && <ResearchArtifact artifact={artifact} />}
-        {artifact && !isResearching && <FollowUpInput onSubmit={onFollowUp} />}
       </div>
     </div>
   );
@@ -252,11 +227,19 @@ function ClarifyView({
   fast,
   onStart,
   onSkip,
+  onHistorySelect,
+  onNew,
+  currentKbId,
+  sidebarRefreshKey,
 }: {
   query: string;
   fast: boolean;
   onStart: (answers: { question: string; answer: string }[]) => void;
   onSkip: () => void;
+  onHistorySelect: (entry: HistoryEntry) => void;
+  onNew: () => void;
+  currentKbId: string | null;
+  sidebarRefreshKey: number;
 }) {
   const [questions, setQuestions] = useState<string[]>([]);
   const [answers, setAnswers] = useState<string[]>([]);
@@ -280,7 +263,9 @@ function ClarifyView({
   }
 
   return (
-    <div className="h-screen bg-white flex flex-col items-center justify-center gap-8 px-4">
+    <div className="min-h-screen flex bg-white">
+      <ResearchSidebar currentKbId={currentKbId} onSelect={onHistorySelect} onNew={onNew} refreshKey={sidebarRefreshKey} pendingQuery={query} />
+      <div className="flex-1 flex flex-col items-center justify-center gap-8 px-6 bg-neutral-50">
       <div className="relative">
         <div
           className="absolute -inset-10 rounded-full blur-3xl pointer-events-none"
@@ -345,6 +330,7 @@ function ClarifyView({
           </div>
         )}
       </div>
+      </div>
     </div>
   );
 }
@@ -365,24 +351,20 @@ export default function Home() {
   const [followUp, setFollowUp] = useState<string | null>(null);
   const [refocusData, setRefocusData] = useState<{ sid: string; instruction: string } | null>(null);
   const [streamVersion, setStreamVersion] = useState(0);
-  const [history, setHistory] = useState<HistoryEntry[]>([]);
+  const [sidebarRefreshKey, setSidebarRefreshKey] = useState(0);
+  const [historyMenuOpen, setHistoryMenuOpen] = useState(false);
   const esRef = useRef<EventSource | null>(null);
 
   useEffect(() => {
-    try {
-      const stored = localStorage.getItem('thread_lens_history');
-      if (stored) setHistory(JSON.parse(stored));
-    } catch {}
+    function onKey(e: KeyboardEvent) {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+        e.preventDefault();
+        setHistoryMenuOpen((v) => !v);
+      }
+    }
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
   }, []);
-
-  function pushHistory(entry: HistoryEntry) {
-    setHistory((prev) => {
-      const filtered = prev.filter((e) => e.id !== entry.id);
-      const next = [entry, ...filtered].slice(0, 20);
-      localStorage.setItem('thread_lens_history', JSON.stringify(next));
-      return next;
-    });
-  }
 
   async function handleHistorySelect(entry: HistoryEntry) {
     try {
@@ -486,6 +468,7 @@ export default function Home() {
         case 'kb_id':
           setKbId(event.id);
           localStorage.setItem('thread_lens_kb', JSON.stringify({ id: event.id, query }));
+          setSidebarRefreshKey((k) => k + 1);
           break;
 
         case 'session_id':
@@ -555,9 +538,7 @@ export default function Home() {
           });
           setOrchestratorPhase('done');
           setAppPhase('complete');
-          if (event.kbId) {
-            pushHistory({ id: event.kbId, query, updatedAt: new Date().toISOString() });
-          }
+          setSidebarRefreshKey((k) => k + 1);
           break;
 
         case 'done':
@@ -572,33 +553,55 @@ export default function Home() {
   }, [appPhase, streamVersion]);
 
   if (appPhase === 'idle') {
-    return <LandingView onSubmit={handleSubmit} history={history} onHistorySelect={handleHistorySelect} />;
+    return (
+      <>
+        <HistoryMenu open={historyMenuOpen} onClose={() => setHistoryMenuOpen(false)} onSelect={handleHistorySelect} currentKbId={kbId} />
+        <LandingView onSubmit={handleSubmit} onHistorySelect={handleHistorySelect} onNew={handleReset} currentKbId={kbId} sidebarRefreshKey={sidebarRefreshKey} />
+      </>
+    );
   }
 
   if (appPhase === 'clarifying') {
     return (
-      <ClarifyView
-        query={query}
-        fast={fast}
-        onStart={startResearch}
-        onSkip={() => startResearch([])}
-      />
+      <>
+        <HistoryMenu open={historyMenuOpen} onClose={() => setHistoryMenuOpen(false)} onSelect={handleHistorySelect} currentKbId={kbId} />
+        <ClarifyView
+          query={query}
+          fast={fast}
+          onStart={startResearch}
+          onSkip={() => startResearch([])}
+          onHistorySelect={handleHistorySelect}
+          onNew={handleReset}
+          currentKbId={kbId}
+          sidebarRefreshKey={sidebarRefreshKey}
+        />
+      </>
     );
   }
 
   return (
-    <ResearchView
-      query={query}
-      orchestratorPhase={orchestratorPhase}
-      agents={agents}
-      previousAgents={previousAgents}
-      artifact={artifact}
-      error={error}
-      cancelled={cancelled}
-      onReset={handleReset}
-      onStop={handleStop}
-      onRefocus={handleRefocus}
-      onFollowUp={handleFollowUp}
-    />
+    <>
+      <HistoryMenu
+        open={historyMenuOpen}
+        onClose={() => setHistoryMenuOpen(false)}
+        onSelect={handleHistorySelect}
+        currentKbId={kbId}
+      />
+      <ResearchView
+        orchestratorPhase={orchestratorPhase}
+        agents={agents}
+        previousAgents={previousAgents}
+        artifact={artifact}
+        error={error}
+        cancelled={cancelled}
+        kbId={kbId}
+        sidebarRefreshKey={sidebarRefreshKey}
+        onReset={handleReset}
+        onStop={handleStop}
+        onRefocus={handleRefocus}
+        onFollowUp={handleFollowUp}
+        onHistorySelect={handleHistorySelect}
+      />
+    </>
   );
 }
