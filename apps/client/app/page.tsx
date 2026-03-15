@@ -11,13 +11,32 @@ import {
   OrchestratorPhase,
   SubAgent,
   ResearchArtifact as ArtifactData,
-} from './lib/simulationData';
+  HistoryEntry,
+} from './lib/types';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000';
 
 // ── Landing ───────────────────────────────────────────────────────────────────
 
-function LandingView({ onSubmit }: { onSubmit: (q: string, fast: boolean) => void }) {
+function timeAgo(iso: string): string {
+  const diff = Date.now() - new Date(iso).getTime();
+  const mins = Math.floor(diff / 60000);
+  if (mins < 60) return mins <= 1 ? 'just now' : `${mins}m ago`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return `${hrs}h ago`;
+  const days = Math.floor(hrs / 24);
+  return days === 1 ? 'yesterday' : `${days}d ago`;
+}
+
+function LandingView({
+  onSubmit,
+  history,
+  onHistorySelect,
+}: {
+  onSubmit: (q: string, fast: boolean) => void;
+  history: HistoryEntry[];
+  onHistorySelect: (entry: HistoryEntry) => void;
+}) {
   return (
     <div className="h-screen bg-white flex flex-col items-center justify-center gap-8 px-4">
       <div className="relative">
@@ -42,8 +61,24 @@ function LandingView({ onSubmit }: { onSubmit: (q: string, fast: boolean) => voi
         What do you want?
       </h1>
 
-      <div className="w-full" style={{ maxWidth: '720px' }}>
+      <div className="w-full flex flex-col gap-4" style={{ maxWidth: '720px' }}>
         <SearchInput onSubmit={onSubmit} />
+
+        {history.length > 0 && (
+          <div className="flex flex-col gap-1">
+            <p className="text-[11px] font-semibold uppercase tracking-widest text-neutral-400 px-1 mb-1">Recent</p>
+            {history.map((entry) => (
+              <button
+                key={entry.id}
+                onClick={() => onHistorySelect(entry)}
+                className="flex items-center justify-between gap-4 px-3.5 py-2.5 rounded-xl hover:bg-neutral-50 border border-transparent hover:border-neutral-200 transition-all text-left group"
+              >
+                <span className="text-[13px] text-neutral-700 truncate group-hover:text-neutral-900">{entry.query}</span>
+                <span className="text-[11px] text-neutral-400 shrink-0">{timeAgo(entry.updatedAt)}</span>
+              </button>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );
@@ -330,7 +365,41 @@ export default function Home() {
   const [followUp, setFollowUp] = useState<string | null>(null);
   const [refocusData, setRefocusData] = useState<{ sid: string; instruction: string } | null>(null);
   const [streamVersion, setStreamVersion] = useState(0);
+  const [history, setHistory] = useState<HistoryEntry[]>([]);
   const esRef = useRef<EventSource | null>(null);
+
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem('thread_lens_history');
+      if (stored) setHistory(JSON.parse(stored));
+    } catch {}
+  }, []);
+
+  function pushHistory(entry: HistoryEntry) {
+    setHistory((prev) => {
+      const filtered = prev.filter((e) => e.id !== entry.id);
+      const next = [entry, ...filtered].slice(0, 20);
+      localStorage.setItem('thread_lens_history', JSON.stringify(next));
+      return next;
+    });
+  }
+
+  async function handleHistorySelect(entry: HistoryEntry) {
+    try {
+      const res = await fetch(`${API_BASE}/research/kb/${entry.id}`);
+      if (!res.ok) return;
+      const kb = await res.json();
+      setQuery(kb.query);
+      setKbId(kb.id);
+      setAgents([]);
+      setPreviousAgents([]);
+      setCancelled(false);
+      setError(null);
+      setOrchestratorPhase('done');
+      setArtifact({ rawMarkdown: kb.artifact });
+      setAppPhase('complete');
+    } catch {}
+  }
 
   function handleSubmit(q: string, fastMode: boolean) {
     setQuery(q);
@@ -486,6 +555,9 @@ export default function Home() {
           });
           setOrchestratorPhase('done');
           setAppPhase('complete');
+          if (event.kbId) {
+            pushHistory({ id: event.kbId, query, updatedAt: new Date().toISOString() });
+          }
           break;
 
         case 'done':
@@ -500,7 +572,7 @@ export default function Home() {
   }, [appPhase, streamVersion]);
 
   if (appPhase === 'idle') {
-    return <LandingView onSubmit={handleSubmit} />;
+    return <LandingView onSubmit={handleSubmit} history={history} onHistorySelect={handleHistorySelect} />;
   }
 
   if (appPhase === 'clarifying') {

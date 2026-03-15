@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { SubAgent, ToolCallStatus } from '../lib/simulationData';
+import { SubAgent, ToolCallStatus } from '../lib/types';
 
 function ToolPill({ subreddit: label, status }: { subreddit: string; status: ToolCallStatus }) {
   return (

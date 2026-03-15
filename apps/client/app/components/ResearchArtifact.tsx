@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import { ResearchArtifact as ArtifactData } from '../lib/simulationData';
+import { ResearchArtifact as ArtifactData } from '../lib/types';
 
 export default function ResearchArtifact({ artifact }: { artifact: ArtifactData }) {
   const [visible, setVisible] = useState(false);
@@ -17,17 +17,19 @@ export default function ResearchArtifact({ artifact }: { artifact: ArtifactData 
       className="transition-all duration-700 ease-out"
       style={{ opacity: visible ? 1 : 0, transform: visible ? 'translateY(0)' : 'translateY(12px)' }}
     >
-      <div className="flex items-center gap-2 mb-5">
-        {[
-          `${artifact.agentCount} agents`,
-          `${artifact.sourceCount} sources`,
-          `${artifact.durationSec}s`,
-        ].map((label) => (
-          <span key={label} className="text-[12px] font-medium text-neutral-500 bg-white border border-neutral-200 px-3 py-1 rounded-full shadow-sm">
-            {label}
-          </span>
-        ))}
-      </div>
+      {(artifact.agentCount != null || artifact.sourceCount != null || artifact.durationSec != null) && (
+        <div className="flex items-center gap-2 mb-5">
+          {[
+            artifact.agentCount != null && `${artifact.agentCount} agents`,
+            artifact.sourceCount != null && `${artifact.sourceCount} sources`,
+            artifact.durationSec != null && `${artifact.durationSec}s`,
+          ].filter(Boolean).map((label) => (
+            <span key={label as string} className="text-[12px] font-medium text-neutral-500 bg-white border border-neutral-200 px-3 py-1 rounded-full shadow-sm">
+              {label}
+            </span>
+          ))}
+        </div>
+      )}
 
       <div className="bg-white border border-neutral-200 rounded-2xl shadow-sm overflow-hidden">
         <div className="px-8 py-7 space-y-6">

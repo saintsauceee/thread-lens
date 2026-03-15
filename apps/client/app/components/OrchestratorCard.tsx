@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { OrchestratorPhase } from '../lib/simulationData';
+import { OrchestratorPhase } from '../lib/types';
 
 const PHASE_CONFIG: Record<OrchestratorPhase, { label: string; color: string }> = {
   thinking:    { label: 'Thinking',    color: 'text-neutral-400' },

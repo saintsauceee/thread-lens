@@ -21,7 +21,13 @@ export interface SubAgent {
 
 export interface ResearchArtifact {
   rawMarkdown: string;
-  agentCount: number;
-  sourceCount: number;
-  durationSec: number;
+  agentCount?: number;
+  sourceCount?: number;
+  durationSec?: number;
+}
+
+export interface HistoryEntry {
+  id: string;
+  query: string;
+  updatedAt: string;
 }
