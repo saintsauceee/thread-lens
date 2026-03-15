@@ -181,28 +181,6 @@ function ResearchView({
           <p className="text-sm text-neutral-800 font-semibold truncate">{query}</p>
         </div>
         <div className="flex items-center gap-3 shrink-0 ml-4">
-          {isResearching ? (
-            <div className="flex items-center gap-2 text-[12px] text-indigo-600 font-medium">
-              <span className="w-1.5 h-1.5 rounded-full bg-indigo-500 animate-pulse" />
-              Researching…
-            </div>
-          ) : cancelled ? (
-            <div className="flex items-center gap-1.5 text-[12px] text-red-500 font-medium">
-              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M18 6L6 18M6 6l12 12" />
-              </svg>
-              Cancelled
-            </div>
-          ) : error ? (
-            <div className="text-[12px] text-red-600 font-medium">Failed</div>
-          ) : (
-            <div className="flex items-center gap-2 text-[12px] text-emerald-600 font-medium">
-              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M20 6L9 17l-5-5" />
-              </svg>
-              Complete
-            </div>
-          )}
           <button
             onClick={onReset}
             className="text-[12px] font-medium bg-neutral-900 hover:bg-neutral-700 text-white px-3.5 py-1.5 rounded-lg transition-colors"

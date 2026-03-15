@@ -4,11 +4,11 @@ import { useState } from 'react';
 import { OrchestratorPhase } from '../lib/simulationData';
 
 const PHASE_CONFIG: Record<OrchestratorPhase, { label: string; color: string }> = {
-  thinking:    { label: 'Extended thinking',    color: 'bg-neutral-100 text-neutral-500' },
-  spawning:    { label: 'Spawning agents',      color: 'bg-indigo-100 text-indigo-700' },
-  evaluating:  { label: 'Evaluating findings',  color: 'bg-amber-100 text-amber-700' },
-  synthesizing:{ label: 'Synthesizing report',  color: 'bg-violet-100 text-violet-700' },
-  done:        { label: 'Complete',             color: 'bg-emerald-100 text-emerald-700' },
+  thinking:    { label: 'Thinking',    color: 'text-neutral-400' },
+  spawning:    { label: 'Spawning',    color: 'text-indigo-500' },
+  evaluating:  { label: 'Evaluating', color: 'text-amber-500' },
+  synthesizing:{ label: 'Synthesizing', color: 'text-violet-500' },
+  done:        { label: 'Complete',   color: 'text-emerald-500' },
 };
 
 export default function OrchestratorCard({
@@ -44,12 +44,12 @@ export default function OrchestratorCard({
             </svg>
           </div>
           <p className="text-sm font-semibold text-neutral-900">Orchestrator</p>
-          <div className={`flex items-center gap-2 text-[12px] font-medium px-3 py-1.5 rounded-full transition-all duration-500 ${color}`}>
+          <div className={`flex items-center gap-1.5 text-[12px] font-medium transition-all duration-500 ${color}`}>
             {phase === 'thinking' && (
               <span className="flex gap-0.5">
-                <span className="w-1 h-1 rounded-full bg-neutral-400 animate-bounce" style={{ animationDelay: '0ms' }} />
-                <span className="w-1 h-1 rounded-full bg-neutral-400 animate-bounce" style={{ animationDelay: '150ms' }} />
-                <span className="w-1 h-1 rounded-full bg-neutral-400 animate-bounce" style={{ animationDelay: '300ms' }} />
+                <span className="w-1 h-1 rounded-full bg-current animate-bounce" style={{ animationDelay: '0ms' }} />
+                <span className="w-1 h-1 rounded-full bg-current animate-bounce" style={{ animationDelay: '150ms' }} />
+                <span className="w-1 h-1 rounded-full bg-current animate-bounce" style={{ animationDelay: '300ms' }} />
               </span>
             )}
             {phase === 'done' && (
@@ -58,7 +58,7 @@ export default function OrchestratorCard({
               </svg>
             )}
             {phase !== 'thinking' && phase !== 'done' && (
-              <span className="w-1.5 h-1.5 rounded-full bg-current opacity-70 animate-pulse" />
+              <span className="w-1.5 h-1.5 rounded-full bg-current animate-pulse" />
             )}
             {label}
           </div>
