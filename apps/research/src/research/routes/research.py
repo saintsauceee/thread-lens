@@ -27,6 +27,7 @@ from thread_lens_db import (
 router = APIRouter(prefix="/research", tags=["research"])
 
 _graph = build_graph()
+_running_tasks: dict[str, asyncio.Task] = {}
 
 _INITIAL_STATE = lambda query, fast=False, clarifications=None, partial_results=None, refocus=None, kb_id=None, kb_existing_results=None, kb_existing_artifact=None, follow_up=None: {
     "query": query,
@@ -59,6 +60,8 @@ async def list_kbs_endpoint():
 
 @router.post("/session/{session_id}/cancel")
 async def cancel_session_endpoint(session_id: str):
+    if task := _running_tasks.pop(session_id, None):
+        task.cancel()
     async with get_db() as db:
         await cancel_session(db, session_id)
     return {"ok": True}
@@ -134,6 +137,8 @@ async def stream_research(
             # Create session record for this run
             session = await create_session(db, active_kb_id, follow_up)
             new_session_id = session["id"]
+
+            _running_tasks[new_session_id] = asyncio.current_task()
 
             yield emit({"type": "kb_id", "id": active_kb_id})
             yield emit({"type": "session_id", "id": new_session_id})
@@ -253,6 +258,7 @@ async def stream_research(
             except GeneratorExit:
                 pass
             finally:
+                _running_tasks.pop(new_session_id, None)
                 if not session_completed:
                     await cancel_session(db, new_session_id)
 

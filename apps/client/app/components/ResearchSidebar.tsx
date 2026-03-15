@@ -38,6 +38,7 @@ export default function ResearchSidebar({
     e.stopPropagation();
     setEntries((prev) => prev.filter((entry) => entry.id !== id));
     toast('Research deleted');
+    if (id === currentKbId) onNew();
     await fetch(`${API_BASE}/research/kb/${id}`, { method: 'DELETE' }).catch(() => {});
   }
 
