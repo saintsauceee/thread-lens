@@ -198,7 +198,7 @@ function ResearchView({
         onSelect={onHistorySelect}
         onNew={onReset}
         refreshKey={sidebarRefreshKey}
-        activeIsRunning={isResearching}
+        activeStatus={cancelled ? 'cancelled' : isResearching ? 'running' : undefined}
       />
 
       <div className="flex-1 flex flex-col min-w-0 bg-neutral-50">

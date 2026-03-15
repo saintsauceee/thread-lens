@@ -21,14 +21,14 @@ export default function ResearchSidebar({
   onNew,
   refreshKey,
   pendingQuery,
-  activeIsRunning,
+  activeStatus,
 }: {
   currentKbId: string | null;
   onSelect: (entry: HistoryEntry) => void;
   onNew: () => void;
   refreshKey: number;
   pendingQuery?: string;
-  activeIsRunning?: boolean;
+  activeStatus?: 'running' | 'cancelled';
 }) {
   const [entries, setEntries] = useState<HistoryEntry[]>([]);
 
@@ -85,15 +85,20 @@ export default function ResearchSidebar({
                 key={entry.id}
                 onClick={() => onSelect(entry)}
                 className={`w-full text-left px-2 py-2 rounded-md mb-px flex flex-col gap-0.5 transition-colors ${active ? 'bg-indigo-50' : 'hover:bg-neutral-50'}`}
-                style={{ border: `1px solid ${active && activeIsRunning ? '#a5b4fc' : 'transparent'}` }}
+                style={{ border: `1px solid ${active && activeStatus === 'running' ? '#a5b4fc' : active && activeStatus === 'cancelled' ? '#fca5a5' : 'transparent'}` }}
               >
                 <span className={`text-[12.5px] leading-snug truncate ${active ? 'text-indigo-700 font-medium' : 'text-neutral-600'}`}>
                   {entry.query}
                 </span>
-                {active && activeIsRunning ? (
+                {active && activeStatus === 'running' ? (
                   <span className="flex items-center gap-1 text-[11px] text-indigo-400">
                     <span className="w-1.5 h-1.5 rounded-full bg-indigo-400 animate-pulse inline-block" />
                     in progress
+                  </span>
+                ) : active && activeStatus === 'cancelled' ? (
+                  <span className="flex items-center gap-1 text-[11px] text-red-400">
+                    <span className="w-1.5 h-1.5 rounded-full bg-red-400 inline-block" />
+                    cancelled
                   </span>
                 ) : (
                   <span className={`text-[11px] ${active ? 'text-indigo-400' : 'text-neutral-300'}`}>
