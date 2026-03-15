@@ -27,8 +27,8 @@ function ToolPill({ subreddit: label, status }: { subreddit: string; status: Too
   );
 }
 
-export default function SubAgentCard({ agent }: { agent: SubAgent }) {
-  const { status, task, sourceCount, id, toolCalls } = agent;
+export default function SubAgentCard({ agent, cancelled }: { agent: SubAgent; cancelled?: boolean }) {
+  const { status, task, sourceCount, id, toolCalls, dimmed } = agent;
   const [visible, setVisible] = useState(false);
   const [collapsed, setCollapsed] = useState(true);
 
@@ -41,12 +41,16 @@ export default function SubAgentCard({ agent }: { agent: SubAgent }) {
   return (
     <div
       className={`rounded-xl border transition-all duration-500 ${
-        isDone
+        dimmed
+          ? 'border-neutral-200 bg-neutral-50'
+          : cancelled && !isDone
+          ? 'border-red-200 bg-white shadow-sm shadow-red-100'
+          : isDone
           ? 'border-emerald-200 bg-white shadow-sm shadow-emerald-100'
           : 'border-indigo-200 bg-white shadow-sm shadow-indigo-100'
       }`}
       style={{
-        opacity: visible ? 1 : 0,
+        opacity: visible ? (dimmed ? 0.5 : 1) : 0,
         transform: visible ? 'translateY(0)' : 'translateY(8px)',
         transition: 'opacity 0.4s ease, transform 0.4s ease, border-color 0.5s, background-color 0.5s',
       }}
@@ -64,19 +68,31 @@ export default function SubAgentCard({ agent }: { agent: SubAgent }) {
           )}
         </div>
         <div className="flex items-center gap-1.5 shrink-0 ml-2">
-          {isDone ? (
-            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="text-emerald-500">
-              <path d="M20 6L9 17l-5-5" />
-            </svg>
+          {dimmed ? (
+            <span className="text-[11px] font-medium text-neutral-400">Refocused</span>
+          ) : cancelled && !isDone ? (
+            <>
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="text-red-400">
+                <path d="M18 6L6 18M6 6l12 12" />
+              </svg>
+              <span className="text-[11px] font-medium text-red-400">Cancelled</span>
+            </>
+          ) : isDone ? (
+            <>
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="text-emerald-500">
+                <path d="M20 6L9 17l-5-5" />
+              </svg>
+              <span className="text-[11px] font-medium text-emerald-600">Done</span>
+            </>
           ) : (
-            <svg className="w-3 h-3 animate-spin text-indigo-500" viewBox="0 0 24 24" fill="none">
-              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" />
-              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
-            </svg>
+            <>
+              <svg className="w-3 h-3 animate-spin text-indigo-500" viewBox="0 0 24 24" fill="none">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" />
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
+              </svg>
+              <span className="text-[11px] font-medium text-indigo-600">Searching</span>
+            </>
           )}
-          <span className={`text-[11px] font-medium ${isDone ? 'text-emerald-600' : 'text-indigo-600'}`}>
-            {isDone ? 'Done' : 'Searching'}
-          </span>
           <svg
             width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"
             className={`text-neutral-400 ml-1 transition-transform duration-300 ${collapsed ? '-rotate-90' : ''}`}

@@ -6,7 +6,7 @@ from langchain_google_genai import ChatGoogleGenerativeAI
 from langgraph.prebuilt import create_react_agent, ToolNode
 
 from .key_rotator import get_rotator
-from .prompts import CLARIFY_SYSTEM, ORCHESTRATOR_EVAL_SYSTEM, ORCHESTRATOR_SYSTEM, SUBAGENT_SYSTEM, SYNTHESIZER_SYSTEM
+from .prompts import CLARIFY_SYSTEM, ORCHESTRATOR_EVAL_SYSTEM, ORCHESTRATOR_REFOCUS_SYSTEM, ORCHESTRATOR_SYSTEM, SUBAGENT_SYSTEM, SYNTHESIZER_SYSTEM
 from .state import ResearchState, ResearchTask, SubagentResult
 from .tools import get_mcp_client
 
@@ -82,15 +82,37 @@ async def orchestrator_node(state: ResearchState) -> dict:
             qa_lines = "\n".join(f"Q: {c['question']}\nA: {c['answer']}" for c in clarifications if c.get("answer"))
             if qa_lines:
                 user_content += f"\n\nUser clarifications:\n{qa_lines}"
+        if state.get("follow_up"):
+            user_content += f"\n\nFollow-up question: {state['follow_up']}"
+        kb_existing = state.get("kb_existing_results") or []
+        if kb_existing:
+            covered = "\n".join(f"- {r['topic']}: {r['findings'][:200]}" for r in kb_existing)
+            user_content += f"\n\nAlready in knowledge base (do not duplicate):\n{covered}"
         response = await _invoke([
             {"role": "system", "content": ORCHESTRATOR_SYSTEM},
             {"role": "user", "content": user_content},
         ], model_name)
         tasks: list[ResearchTask] = _parse_json(response.content)
         return {"tasks": tasks, "round": state.get("round", 0) + 1}
+    elif state.get("refocus") and not state.get("refocus_dispatched"):
+        # Refocus planning mode: generate new tasks based on instruction + existing findings
+        findings_summary = "\n\n".join(
+            f"### {r['topic']}\n{r['findings'][:400]}" for r in results
+        )
+        user_content = (
+            f"Original query: {state['query']}\n\n"
+            f"Already researched:\n{findings_summary}\n\n"
+            f"User refocus instruction: {state['refocus']}"
+        )
+        response = await _invoke([
+            {"role": "system", "content": ORCHESTRATOR_REFOCUS_SYSTEM},
+            {"role": "user", "content": user_content},
+        ], model_name)
+        tasks: list[ResearchTask] = _parse_json(response.content)
+        return {"tasks": tasks, "round": 1}
     else:
         # Evaluation mode: check if findings are sufficient
-        if state.get("round", 1) >= 2:
+        if state.get("round", 1) >= 2 or state.get("refocus_dispatched"):
             return {"gaps": []}
         findings_summary = "\n\n".join(
             f"### {r['topic']}\n{r['findings'][:600]}" for r in results
@@ -112,6 +134,13 @@ async def subagent_node(state: ResearchState) -> dict:
         f"Suggested subreddits: {', '.join(task['subreddits']) or 'any relevant'}\n\n"
         f"Original query: {state['query']}"
     )
+    kb_existing = state.get("kb_existing_results") or []
+    if kb_existing:
+        task_keywords = set(task["topic"].lower().split())
+        relevant = [r for r in kb_existing if task_keywords & set(r["topic"].lower().split())]
+        if relevant:
+            prior = "\n\n".join(f"Prior finding on '{r['topic']}':\n{r['findings'][:400]}" for r in relevant)
+            user_msg += f"\n\nExisting knowledge base context — build on this, do not duplicate:\n{prior}"
 
     model_name = SUBAGENT_MODEL_FAST if state.get("fast") else SUBAGENT_MODEL
     last_exc: Exception | None = None
@@ -163,10 +192,11 @@ async def subagent_node(state: ResearchState) -> dict:
 
 
 async def synthesizer_node(state: ResearchState) -> dict:
+    all_results = (state.get("kb_existing_results") or []) + state["results"]
     all_findings = "\n\n---\n\n".join(
-        f"## {r['topic']}\n{r['findings']}" for r in state["results"]
+        f"## {r['topic']}\n{r['findings']}" for r in all_results
     )
-    all_sources = list({s for r in state["results"] for s in r["sources"]})
+    all_sources = list({s for r in all_results for s in r["sources"]})
 
     model_name = SUBAGENT_MODEL_FAST if state.get("fast") else SUBAGENT_MODEL
     response = await _invoke(
@@ -174,7 +204,9 @@ async def synthesizer_node(state: ResearchState) -> dict:
             {"role": "system", "content": SYNTHESIZER_SYSTEM},
             {
                 "role": "user",
-                "content": f"Query: {state['query']}\n\nAgent findings:\n{all_findings}",
+                "content": f"Query: {state['query']}"
+                    + (f"\nFollow-up: {state['follow_up']}" if state.get("follow_up") else "")
+                    + f"\n\nAgent findings:\n{all_findings}",
             },
         ],
         model_name,

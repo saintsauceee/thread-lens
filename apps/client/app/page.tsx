@@ -1,10 +1,11 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import SearchInput from './components/SearchInput';
 import OrchestratorCard from './components/OrchestratorCard';
 import SubAgentCard from './components/SubAgentCard';
 import ResearchReport from './components/ResearchReport';
+import FollowUpInput from './components/FollowUpInput';
 import {
   AppPhase,
   OrchestratorPhase,
@@ -48,10 +49,50 @@ function LandingView({ onSubmit }: { onSubmit: (q: string, fast: boolean) => voi
   );
 }
 
-function AgentsSection({ agents }: { agents: SubAgent[] }) {
-  const [expanded, setExpanded] = useState(true);
+function AgentGrid({ agents, cancelled }: { agents: SubAgent[]; cancelled?: boolean }) {
   const round1 = agents.filter((a) => a.round === 1);
   const round2 = agents.filter((a) => a.round === 2);
+  return (
+    <>
+      {round1.length > 0 && (
+        <div className="flex gap-3 mb-4">
+          <div className="flex flex-col gap-3 flex-1">
+            {round1.filter((_, i) => i % 2 === 0).map((a) => <SubAgentCard key={`${a.id}-${a.dimmed}`} agent={a} cancelled={cancelled} />)}
+          </div>
+          <div className="flex flex-col gap-3 flex-1">
+            {round1.filter((_, i) => i % 2 !== 0).map((a) => <SubAgentCard key={`${a.id}-${a.dimmed}`} agent={a} cancelled={cancelled} />)}
+          </div>
+        </div>
+      )}
+      {round2.length > 0 && (
+        <>
+          <div className="flex items-center gap-3 my-6">
+            <div className="flex-1 h-px bg-neutral-200" />
+            <span className="flex items-center gap-1.5 text-[11px] font-semibold text-neutral-500 uppercase tracking-widest shrink-0">
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35M11 8v6M8 11h6"/>
+              </svg>
+              Expanded research
+            </span>
+            <div className="flex-1 h-px bg-neutral-200" />
+          </div>
+          <div className="flex gap-3 mb-4">
+            <div className="flex flex-col gap-3 flex-1">
+              {round2.filter((_, i) => i % 2 === 0).map((a) => <SubAgentCard key={`${a.id}-${a.dimmed}`} agent={a} cancelled={cancelled} />)}
+            </div>
+            <div className="flex flex-col gap-3 flex-1">
+              {round2.filter((_, i) => i % 2 !== 0).map((a) => <SubAgentCard key={`${a.id}-${a.dimmed}`} agent={a} cancelled={cancelled} />)}
+            </div>
+          </div>
+        </>
+      )}
+    </>
+  );
+}
+
+function AgentsSection({ agents, previousAgents, cancelled }: { agents: SubAgent[]; previousAgents: SubAgent[]; cancelled?: boolean }) {
+  const [expanded, setExpanded] = useState(true);
+  const allAgents = [...previousAgents, ...agents];
   const doneCount = agents.filter((a) => a.status === 'done').length;
 
   return (
@@ -83,39 +124,22 @@ function AgentsSection({ agents }: { agents: SubAgent[] }) {
           transition: 'max-height 0.4s ease, opacity 0.3s ease',
         }}
       >
-        {round1.length > 0 && (
-          <div className="flex gap-3 mb-4">
-            <div className="flex flex-col gap-3 flex-1">
-              {round1.filter((_, i) => i % 2 === 0).map((a) => <SubAgentCard key={a.id} agent={a} />)}
-            </div>
-            <div className="flex flex-col gap-3 flex-1">
-              {round1.filter((_, i) => i % 2 !== 0).map((a) => <SubAgentCard key={a.id} agent={a} />)}
-            </div>
-          </div>
-        )}
-
-        {round2.length > 0 && (
+        {previousAgents.length > 0 && (
           <>
+            <AgentGrid agents={previousAgents} />
             <div className="flex items-center gap-3 my-6">
-              <div className="flex-1 h-px bg-neutral-200" />
-              <span className="flex items-center gap-1.5 text-[11px] font-semibold text-neutral-500 uppercase tracking-widest shrink-0">
+              <div className="flex-1 h-px bg-violet-200" />
+              <span className="flex items-center gap-1.5 text-[11px] font-semibold text-violet-500 uppercase tracking-widest shrink-0">
                 <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                  <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35M11 8v6M8 11h6"/>
+                  <path d="M3 12h18M3 6h18M3 18h18" />
                 </svg>
-                Expanded research
+                Refocused
               </span>
-              <div className="flex-1 h-px bg-neutral-200" />
-            </div>
-            <div className="flex gap-3 mb-4">
-              <div className="flex flex-col gap-3 flex-1">
-                {round2.filter((_, i) => i % 2 === 0).map((a) => <SubAgentCard key={a.id} agent={a} />)}
-              </div>
-              <div className="flex flex-col gap-3 flex-1">
-                {round2.filter((_, i) => i % 2 !== 0).map((a) => <SubAgentCard key={a.id} agent={a} />)}
-              </div>
+              <div className="flex-1 h-px bg-violet-200" />
             </div>
           </>
         )}
+        <AgentGrid agents={agents} cancelled={cancelled} />
       </div>
     </div>
   );
@@ -125,17 +149,29 @@ function ResearchView({
   query,
   orchestratorPhase,
   agents,
+  previousAgents,
   report,
   error,
+  cancelled,
   onReset,
+  onStop,
+  onRefocus,
+  onFollowUp,
 }: {
   query: string;
   orchestratorPhase: OrchestratorPhase;
   agents: SubAgent[];
+  previousAgents: SubAgent[];
   report: ReportData | null;
   error: string | null;
+  cancelled: boolean;
   onReset: () => void;
+  onStop: () => void;
+  onRefocus: (instruction: string) => void;
+  onFollowUp: (question: string) => void;
 }) {
+  const isResearching = !report && !error && !cancelled;
+
   return (
     <div className="min-h-screen bg-neutral-50 flex flex-col">
       <div className="sticky top-0 z-10 bg-white/90 backdrop-blur border-b border-neutral-100 px-6 py-3.5 flex items-center justify-between shadow-sm">
@@ -148,21 +184,6 @@ function ResearchView({
           <p className="text-sm text-neutral-800 font-semibold truncate">{query}</p>
         </div>
         <div className="flex items-center gap-3 shrink-0 ml-4">
-          {!report && !error ? (
-            <div className="flex items-center gap-2 text-[12px] text-indigo-600 font-medium">
-              <span className="w-1.5 h-1.5 rounded-full bg-indigo-500 animate-pulse" />
-              Researching…
-            </div>
-          ) : error ? (
-            <div className="text-[12px] text-red-600 font-medium">Failed</div>
-          ) : (
-            <div className="flex items-center gap-2 text-[12px] text-emerald-600 font-medium">
-              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M20 6L9 17l-5-5" />
-              </svg>
-              Complete
-            </div>
-          )}
           <button
             onClick={onReset}
             className="text-[12px] font-medium bg-neutral-900 hover:bg-neutral-700 text-white px-3.5 py-1.5 rounded-lg transition-colors"
@@ -173,11 +194,19 @@ function ResearchView({
       </div>
 
       <div className="flex-1 max-w-4xl mx-auto w-full px-6 py-8">
-        <OrchestratorCard phase={orchestratorPhase} />
+        <OrchestratorCard
+          phase={orchestratorPhase}
+          isResearching={isResearching}
+          onStop={onStop}
+          onRefocus={onRefocus}
+        />
 
-        {agents.length > 0 && <AgentsSection agents={agents} />}
+        {(agents.length > 0 || previousAgents.length > 0) && (
+          <AgentsSection agents={agents} previousAgents={previousAgents} cancelled={cancelled} />
+        )}
 
         {report && <ResearchReport report={report} />}
+        {report && !isResearching && <FollowUpInput onSubmit={onFollowUp} />}
       </div>
     </div>
   );
@@ -292,8 +321,16 @@ export default function Home() {
   const [clarifications, setClarifications] = useState<{ question: string; answer: string }[]>([]);
   const [orchestratorPhase, setOrchestratorPhase] = useState<OrchestratorPhase>('thinking');
   const [agents, setAgents] = useState<SubAgent[]>([]);
+  const [previousAgents, setPreviousAgents] = useState<SubAgent[]>([]);
   const [report, setReport] = useState<ReportData | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [cancelled, setCancelled] = useState(false);
+  const [sessionId, setSessionId] = useState<string | null>(null);
+  const [kbId, setKbId] = useState<string | null>(null);
+  const [followUp, setFollowUp] = useState<string | null>(null);
+  const [refocusData, setRefocusData] = useState<{ sid: string; instruction: string } | null>(null);
+  const [streamVersion, setStreamVersion] = useState(0);
+  const esRef = useRef<EventSource | null>(null);
 
   function handleSubmit(q: string, fastMode: boolean) {
     setQuery(q);
@@ -311,12 +348,46 @@ export default function Home() {
   }
 
   function handleReset() {
+    esRef.current?.close();
     setAppPhase('idle');
     setQuery('');
     setClarifications([]);
     setAgents([]);
+    setPreviousAgents([]);
     setReport(null);
     setError(null);
+    setCancelled(false);
+    setSessionId(null);
+    setKbId(null);
+    setFollowUp(null);
+    setRefocusData(null);
+    setStreamVersion(0);
+    localStorage.removeItem('thread_lens_kb');
+  }
+
+  function handleStop() {
+    esRef.current?.close();
+    setCancelled(true);
+  }
+
+  function handleFollowUp(question: string) {
+    setPreviousAgents((prev) => [...prev, ...agents.map((a) => ({ ...a, status: 'done' as const, dimmed: true }))]);
+    setAgents([]);
+    setReport(null);
+    setCancelled(false);
+    setOrchestratorPhase('thinking');
+    setFollowUp(question);
+    setStreamVersion((v) => v + 1);
+    setAppPhase('researching');
+  }
+
+  function handleRefocus(instruction: string) {
+    if (!sessionId) return;
+    setPreviousAgents((prev) => [...prev, ...agents.map((a) => ({ ...a, status: 'done' as const, dimmed: true }))]);
+    setAgents([]);
+    setOrchestratorPhase('thinking');
+    setRefocusData({ sid: sessionId, instruction });
+    setStreamVersion((v) => v + 1);
   }
 
   useEffect(() => {
@@ -325,15 +396,33 @@ export default function Home() {
     let agentCount = 0;
     let totalSources = 0;
 
-    const clarificationsParam = clarifications.length
-      ? `&clarifications=${encodeURIComponent(JSON.stringify(clarifications))}`
-      : '';
-    const es = new EventSource(`${API_BASE}/research/stream?query=${encodeURIComponent(query)}&fast=${fast}${clarificationsParam}`);
+    const params = new URLSearchParams({ query, fast: String(fast) });
+    if (clarifications.length) params.set('clarifications', JSON.stringify(clarifications));
+    if (refocusData) {
+      params.set('refocus', refocusData.instruction);
+      params.set('session_id', refocusData.sid);
+    }
+    if (kbId && followUp) {
+      params.set('kb_id', kbId);
+      params.set('follow_up', followUp);
+    }
+
+    const es = new EventSource(`${API_BASE}/research/stream?${params}`);
+    esRef.current = es;
 
     es.onmessage = (e) => {
       const event = JSON.parse(e.data);
 
       switch (event.type) {
+        case 'kb_id':
+          setKbId(event.id);
+          localStorage.setItem('thread_lens_kb', JSON.stringify({ id: event.id, query }));
+          break;
+
+        case 'session_id':
+          setSessionId(event.id);
+          break;
+
         case 'orchestrator_phase': {
           const order: OrchestratorPhase[] = ['thinking', 'spawning', 'evaluating', 'synthesizing', 'done'];
           setOrchestratorPhase((prev) => {
@@ -408,7 +497,7 @@ export default function Home() {
     es.onerror = () => es.close();
 
     return () => es.close();
-  }, [appPhase, fast, clarifications]);
+  }, [appPhase, streamVersion]);
 
   if (appPhase === 'idle') {
     return <LandingView onSubmit={handleSubmit} />;
@@ -430,9 +519,14 @@ export default function Home() {
       query={query}
       orchestratorPhase={orchestratorPhase}
       agents={agents}
+      previousAgents={previousAgents}
       report={report}
       error={error}
+      cancelled={cancelled}
       onReset={handleReset}
+      onStop={handleStop}
+      onRefocus={handleRefocus}
+      onFollowUp={handleFollowUp}
     />
   );
 }
