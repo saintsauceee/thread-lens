@@ -1,3 +1,5 @@
+![Thread Lens](./assets/threadlens-readme-banner.png)
+
 # Thread Lens
 
 A multi-agent deep research tool for Reddit. Ask a question, and a coordinated team of AI agents searches Reddit to synthesize a comprehensive answer.
