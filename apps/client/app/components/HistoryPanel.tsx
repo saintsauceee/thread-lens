@@ -30,6 +30,7 @@ export default function HistoryPanel({
 
   useEffect(() => {
     if (!open) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setEntries(null);
     fetch(`${API_BASE}/research/kbs`)
       .then((r) => r.json())
