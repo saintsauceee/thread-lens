@@ -22,3 +22,11 @@ jobs:
       - run: npm ci
       - run: npm run lint
       - run: npm run typecheck
+
+  lint-research:
+    name: Lint research
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+      - run: uv run --directory apps/research ruff check
