@@ -1,4 +1,4 @@
-![Thread Lens](./assets/threadlens-readme-banner.png)
+![Thread Lens](./docs/images/threadlens-readme-banner.png)
 
 # Thread Lens
 
