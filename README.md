@@ -1,8 +1,16 @@
 ![Thread Lens](./docs/images/threadlens-readme-banner.png)
 
+<div align="center">
+
 # Thread Lens
 
-A multi-agent deep research tool for Reddit. Ask a question, and a coordinated team of AI agents searches Reddit to synthesize a comprehensive answer.
+Multi-agent deep research, sourced from Reddit.
+
+![CI](https://github.com/saintsauceee/thread-lens/actions/workflows/ci.yml/badge.svg)
+![Docker](https://img.shields.io/badge/docker%20compose-ready-blue?logo=docker)
+![License](https://img.shields.io/badge/license-MIT-green)
+
+</div>
 
 ## How it works
 
