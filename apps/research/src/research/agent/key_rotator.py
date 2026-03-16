@@ -4,7 +4,6 @@ import threading
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 
-
 _RPM_LIMIT = 4   # stay under 5 RPM with a safety margin
 _RPD_LIMIT = 18  # stay under 20 RPD with a safety margin
 

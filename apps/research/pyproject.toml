@@ -39,3 +39,7 @@ dev = [
 
 [tool.ruff.lint]
 select = ["E", "F", "I"]
+ignore = ["E501"]
+
+[tool.ruff.lint.per-file-ignores]
+"src/research/main.py" = ["E402"]
