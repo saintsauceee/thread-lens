@@ -1,12 +1,14 @@
 from dotenv import load_dotenv
+
 load_dotenv()
 
 from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from thread_lens_db import init_db
 
 from research.routes import research
-from thread_lens_db import init_db
 
 
 @asynccontextmanager

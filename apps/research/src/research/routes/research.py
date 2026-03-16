@@ -4,46 +4,47 @@ from typing import Optional
 
 from fastapi import APIRouter, HTTPException
 from sse_starlette.sse import EventSourceResponse
+from thread_lens_db import (
+    append_findings,
+    cancel_session,
+    complete_session,
+    create_kb,
+    create_session,
+    delete_kb,
+    get_db,
+    get_findings,
+    get_kb,
+    get_session_findings,
+    list_kbs,
+    update_artifact,
+)
 
 from research.agent import build_graph
 from research.agent.nodes import clarify_query
 from research.agent.state import SubagentResult
 from research.models import ResearchRequest, ResearchResponse
-from thread_lens_db import (
-    get_db,
-    create_kb,
-    get_kb,
-    list_kbs,
-    delete_kb,
-    update_artifact,
-    append_findings,
-    get_findings,
-    get_session_findings,
-    create_session,
-    complete_session,
-    cancel_session,
-)
 
 router = APIRouter(prefix="/research", tags=["research"])
 
 _graph = build_graph()
 _running_tasks: dict[str, asyncio.Task] = {}
 
-_INITIAL_STATE = lambda query, fast=False, clarifications=None, partial_results=None, refocus=None, kb_id=None, kb_existing_results=None, kb_existing_artifact=None, follow_up=None: {
-    "query": query,
-    "fast": fast,
-    "clarifications": clarifications or [],
-    "refocus": refocus or "",
-    "refocus_dispatched": False,
-    "kb_id": kb_id or "",
-    "kb_existing_results": kb_existing_results or [],
-    "kb_existing_artifact": kb_existing_artifact or "",
-    "follow_up": follow_up or "",
-    "tasks": [],
-    "results": partial_results or [],
-    "gaps": [],
-    "round": 0,
-}
+def _INITIAL_STATE(query, fast=False, clarifications=None, partial_results=None, refocus=None, kb_id=None, kb_existing_results=None, kb_existing_artifact=None, follow_up=None):
+    return {
+        "query": query,
+        "fast": fast,
+        "clarifications": clarifications or [],
+        "refocus": refocus or "",
+        "refocus_dispatched": False,
+        "kb_id": kb_id or "",
+        "kb_existing_results": kb_existing_results or [],
+        "kb_existing_artifact": kb_existing_artifact or "",
+        "follow_up": follow_up or "",
+        "tasks": [],
+        "results": partial_results or [],
+        "gaps": [],
+        "round": 0,
+    }
 
 
 @router.get("/clarify")

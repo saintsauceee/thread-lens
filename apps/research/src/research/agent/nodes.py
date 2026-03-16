@@ -3,10 +3,17 @@ import json
 import re
 
 from langchain_google_genai import ChatGoogleGenerativeAI
-from langgraph.prebuilt import create_react_agent, ToolNode
+from langgraph.prebuilt import ToolNode, create_react_agent
 
 from .key_rotator import get_rotator
-from .prompts import CLARIFY_SYSTEM, ORCHESTRATOR_EVAL_SYSTEM, ORCHESTRATOR_REFOCUS_SYSTEM, ORCHESTRATOR_SYSTEM, SUBAGENT_SYSTEM, SYNTHESIZER_SYSTEM
+from .prompts import (
+    CLARIFY_SYSTEM,
+    ORCHESTRATOR_EVAL_SYSTEM,
+    ORCHESTRATOR_REFOCUS_SYSTEM,
+    ORCHESTRATOR_SYSTEM,
+    SUBAGENT_SYSTEM,
+    SYNTHESIZER_SYSTEM,
+)
 from .state import ResearchState, ResearchTask, SubagentResult
 from .tools import get_mcp_client
 

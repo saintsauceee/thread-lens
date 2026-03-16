@@ -39,10 +39,12 @@ export default function HistoryMenu({
 
   useEffect(() => {
     if (!open) { requestAnimationFrame(() => setVisible(false)); return; }
-    requestAnimationFrame(() => setVisible(true));
-    setQuery('');
-    setActive(0);
-    inputRef.current?.focus();
+    requestAnimationFrame(() => {
+      setVisible(true);
+      setQuery('');
+      setActive(0);
+      inputRef.current?.focus();
+    });
 
     fetch(`${API_BASE}/research/kbs`)
       .then((r) => r.json())
