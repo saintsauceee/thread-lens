@@ -38,7 +38,7 @@ export default function HistoryMenu({
   const listRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (!open) { setVisible(false); return; }
+    if (!open) { requestAnimationFrame(() => setVisible(false)); return; }
     requestAnimationFrame(() => setVisible(true));
     setQuery('');
     setActive(0);
@@ -61,7 +61,6 @@ export default function HistoryMenu({
     ? entries.filter((e) => e.query.toLowerCase().includes(query.toLowerCase()))
     : entries;
 
-  useEffect(() => { setActive(0); }, [query]);
 
   useEffect(() => {
     if (!open) return;
@@ -123,7 +122,7 @@ export default function HistoryMenu({
           <input
             ref={inputRef}
             value={query}
-            onChange={(e) => setQuery(e.target.value)}
+            onChange={(e) => { setQuery(e.target.value); setActive(0); }}
             placeholder="Search research history…"
             className="flex-1 text-[14px] text-neutral-800 placeholder:text-neutral-400 bg-transparent outline-none"
           />

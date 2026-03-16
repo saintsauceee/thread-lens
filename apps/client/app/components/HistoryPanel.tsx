@@ -26,19 +26,17 @@ export default function HistoryPanel({
   onSelect: (entry: HistoryEntry) => void;
   currentKbId: string | null;
 }) {
-  const [entries, setEntries] = useState<HistoryEntry[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [entries, setEntries] = useState<HistoryEntry[] | null>(null);
 
   useEffect(() => {
     if (!open) return;
-    setLoading(true);
+    setEntries(null);
     fetch(`${API_BASE}/research/kbs`)
       .then((r) => r.json())
       .then((data: { id: string; query: string; updated_at: string }[]) => {
         setEntries(data.map((d) => ({ id: d.id, query: d.query, updatedAt: d.updated_at })));
       })
-      .catch(() => {})
-      .finally(() => setLoading(false));
+      .catch(() => { setEntries([]); });
   }, [open]);
 
   return (
@@ -70,7 +68,7 @@ export default function HistoryPanel({
         </div>
 
         <div className="flex-1 overflow-y-auto py-2">
-          {loading ? (
+          {entries === null ? (
             <div className="flex flex-col gap-2 px-4 py-3">
               {[0, 1, 2, 3].map((i) => (
                 <div key={i} className="animate-pulse flex flex-col gap-1.5">
@@ -79,7 +77,7 @@ export default function HistoryPanel({
                 </div>
               ))}
             </div>
-          ) : entries.length === 0 ? (
+          ) : entries?.length === 0 ? (
             <p className="text-[12px] text-neutral-400 text-center mt-8">No history yet</p>
           ) : (
             entries.map((entry) => (
