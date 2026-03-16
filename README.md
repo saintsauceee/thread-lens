@@ -2,6 +2,8 @@
 
 <div align="center">
 
+<div align="center">
+
 # Thread Lens
 
 Multi-agent deep research, sourced from Reddit.
