@@ -1,0 +1,25 @@
+services:
+  research:
+    build:
+      context: .
+      dockerfile: apps/research/Dockerfile
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env
+    environment:
+      THREAD_LENS_DB_PATH: /data/thread_lens.db
+    volumes:
+      - db:/data
+
+  client:
+    build:
+      context: .
+      dockerfile: apps/client/Dockerfile
+    ports:
+      - "3000:3000"
+    depends_on:
+      - research
+
+volumes:
+  db:

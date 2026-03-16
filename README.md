@@ -32,17 +32,26 @@ packages/
 
 ## Getting started
 
-### Backend
+### Docker
+
+```bash
+cp .env.example .env  # fill in your API keys
+docker compose up
+```
+
+Frontend at `http://localhost:3000`, backend at `http://localhost:8000`.
+
+### Manual
+
+**Backend**
 
 ```bash
 cd apps/research
 uv sync
-uv run uvicorn main:app --reload
+uv run uvicorn research.main:app --reload
 ```
 
-Runs on `http://localhost:8000`.
-
-### Frontend
+**Frontend**
 
 ```bash
 cd apps/client
@@ -50,4 +59,6 @@ npm install
 npm run dev
 ```
 
-Runs on `http://localhost:3000`.
+### Environment variables
+
+See `.env.example`. You need at least one `GOOGLE_API_KEY_*` for the research agents.
