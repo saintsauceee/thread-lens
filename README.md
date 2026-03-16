@@ -14,10 +14,10 @@ A multi-agent deep research tool for Reddit. Ask a question, and a coordinated t
 
 | Layer | Tech |
 |---|---|
-| Frontend | Next.js, React, TypeScript, Tailwind CSS |
+| Frontend | Next.js (React, TypeScript, Tailwind CSS) |
 | Backend | FastAPI, LangGraph |
 | Reddit access | MCP server (`packages/mcp-reddit`) |
-| Database | SQLite (shared via `packages/db`) |
+| Database | SQLite (`packages/db`) |
 
 ## Project structure
 
