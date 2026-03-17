@@ -1,5 +1,7 @@
 # Research API
 
+[![CI](https://github.com/saintsauceee/thread-lens/actions/workflows/ci.yml/badge.svg)](https://github.com/saintsauceee/thread-lens/actions/workflows/ci.yml)
+
 FastAPI backend that orchestrates a multi-agent deep research pipeline grounded by Reddit posts.
 
 ## How it works
