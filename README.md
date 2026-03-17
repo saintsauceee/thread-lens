@@ -2,8 +2,11 @@
 
 <img src="./docs/images/threadlens-readme-banner-resized.png" width="180" />
 
+<img src="./docs/images/threadlens-readme-banner-resized.png" width="180" />
+
 # Thread Lens
 
+**Multi-agent deep research, sourced from Reddit.**
 **Multi-agent deep research, sourced from Reddit.**
 
 ![CI](https://github.com/saintsauceee/thread-lens/actions/workflows/ci.yml/badge.svg)
@@ -14,8 +17,17 @@
 
 ---
 
+---
+
 ## How it works
 
+| Step | What happens |
+|------|-------------|
+| **Clarify** | Follow-up questions sharpen your query |
+| **Orchestrate** | A planner agent breaks it into sub-tasks |
+| **Research** | Parallel sub-agents search Reddit posts and subreddits |
+| **Synthesize** | A final agent consolidates findings into a structured report |
+| **History** | All research is saved and browsable |
 | Step | What happens |
 |------|-------------|
 | **Clarify** | Follow-up questions sharpen your query |
@@ -29,6 +41,8 @@
 | Layer | Tech |
 |-------|------|
 | Frontend | Next.js, React, TypeScript, Tailwind CSS |
+|-------|------|
+| Frontend | Next.js, React, TypeScript, Tailwind CSS |
 | Backend | FastAPI, LangGraph |
 | Reddit access | MCP server (`packages/mcp-reddit`) |
 | Database | SQLite (`packages/db`) |
@@ -36,12 +50,14 @@
 ## Getting started
 
 ### Docker (recommended)
+### Docker (recommended)
 
 ```bash
 cp .env.example .env  # fill in your API keys
 docker compose up
 ```
 
+Frontend → `http://localhost:3000` · Backend → `http://localhost:8000`
 Frontend → `http://localhost:3000` · Backend → `http://localhost:8000`
 
 ### Manual
