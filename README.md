@@ -1,4 +1,6 @@
-![Thread Lens](./docs/images/threadlens-readme-banner.png)
+![Thread Lens](./docs/images/threadlens-readme-banner-resized.png)
+
+<div align="center">
 
 <div align="center">
 
