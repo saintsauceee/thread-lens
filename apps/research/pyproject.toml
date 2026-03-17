@@ -37,6 +37,9 @@ dev = [
     "ruff>=0.9.0",
 ]
 
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+
 [tool.ruff.lint]
 select = ["E", "F", "I"]
 ignore = ["E501"]
