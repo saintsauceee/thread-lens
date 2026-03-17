@@ -1,4 +1,4 @@
-![Thread Lens](./docs/images/threadlens-readme-banner-resized.png)
+<img src="./docs/images/threadlens-readme-banner-resized.png" width="900" />
 
 # Thread Lens
 
