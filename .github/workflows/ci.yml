@@ -37,7 +37,12 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v5
-      - run: uv run --directory apps/research pytest tests/ -v
+      - run: uv run --directory apps/research pytest tests/ -v --cov=research --cov-report=xml
+      - uses: codecov/codecov-action@v5
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: apps/research/coverage.xml
+          flags: research
 
   build:
     name: Docker build

@@ -1,6 +1,7 @@
 # Research API
 
 [![CI](https://github.com/saintsauceee/thread-lens/actions/workflows/ci.yml/badge.svg)](https://github.com/saintsauceee/thread-lens/actions/workflows/ci.yml)
+[![codecov](https://codecov.io/gh/saintsauceee/thread-lens/graph/badge.svg?token=YOUR_CODECOV_TOKEN&flag=research)](https://codecov.io/gh/saintsauceee/thread-lens)
 
 FastAPI backend that orchestrates a multi-agent deep research pipeline grounded by Reddit posts.
 
