@@ -1,4 +1,4 @@
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 
 async def test_clarify_returns_questions(client):
@@ -57,6 +57,14 @@ async def test_cancel_session(client, mock_db):
         r = await client.post("/research/session/sess-123/cancel")
     assert r.status_code == 200
     assert r.json() == {"ok": True}
+
+
+async def test_cancel_session_cancels_running_task(client, mock_db):
+    mock_task = MagicMock()
+    with patch.dict("research.routes.research._running_tasks", {"sess-123": mock_task}), \
+         patch("research.routes.research.cancel_session", new=AsyncMock()):
+        await client.post("/research/session/sess-123/cancel")
+    mock_task.cancel.assert_called_once()
 
 
 async def test_run_research_returns_artifact(client):
