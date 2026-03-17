@@ -57,3 +57,37 @@ async def test_cancel_session(client, mock_db):
         r = await client.post("/research/session/sess-123/cancel")
     assert r.status_code == 200
     assert r.json() == {"ok": True}
+
+
+async def test_run_research_returns_artifact(client):
+    graph_result = {
+        "artifact": "# Research Report",
+        "results": [{"sources": ["https://reddit.com/r/a"]}],
+    }
+    with patch("research.routes.research._graph.ainvoke", new=AsyncMock(return_value=graph_result)):
+        r = await client.post("/research", json={"query": "best keyboards"})
+    assert r.status_code == 200
+    body = r.json()
+    assert body["artifact"] == "# Research Report"
+    assert body["query"] == "best keyboards"
+    assert body["sources"] == ["https://reddit.com/r/a"]
+
+
+async def test_run_research_deduplicates_sources(client):
+    graph_result = {
+        "artifact": "# Report",
+        "results": [
+            {"sources": ["https://reddit.com/r/a", "https://reddit.com/r/b"]},
+            {"sources": ["https://reddit.com/r/a"]},
+        ],
+    }
+    with patch("research.routes.research._graph.ainvoke", new=AsyncMock(return_value=graph_result)):
+        r = await client.post("/research", json={"query": "test"})
+    assert len(r.json()["sources"]) == 2
+
+
+async def test_run_research_returns_500_on_error(client):
+    with patch("research.routes.research._graph.ainvoke", new=AsyncMock(side_effect=Exception("LLM failed"))):
+        r = await client.post("/research", json={"query": "test"})
+    assert r.status_code == 500
+    assert "LLM failed" in r.json()["detail"]
