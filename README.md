@@ -1,10 +1,4 @@
-![Thread Lens](./docs/images/threadlens-readme-banner-resized.png)
-
-<div align="center">
-
-<div align="center">
-
-<img src="./docs/images/threadlens-readme-banner-resized.png" width="180" />
+<img src="./docs/images/threadlens-readme-banner-resized.png" width="900" />
 
 # Thread Lens
 
@@ -13,8 +7,6 @@
 ![CI](https://github.com/saintsauceee/thread-lens/actions/workflows/ci.yml/badge.svg)
 ![Docker](https://img.shields.io/badge/docker%20compose-ready-blue?logo=docker)
 ![License](https://img.shields.io/badge/license-MIT-green)
-
-</div>
 
 ---
 
