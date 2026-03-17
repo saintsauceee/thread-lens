@@ -1,12 +1,10 @@
-![Thread Lens](./docs/images/threadlens-readme-banner-resized.png)
-
 <div align="center">
 
-<div align="center">
+<img src="./docs/images/threadlens-readme-banner-resized.png" width="180" />
 
 # Thread Lens
 
-Multi-agent deep research, sourced from Reddit.
+**Multi-agent deep research, sourced from Reddit.**
 
 ![CI](https://github.com/saintsauceee/thread-lens/actions/workflows/ci.yml/badge.svg)
 ![Docker](https://img.shields.io/badge/docker%20compose-ready-blue?logo=docker)
@@ -14,44 +12,37 @@ Multi-agent deep research, sourced from Reddit.
 
 </div>
 
+---
+
 ## How it works
 
-1. **Clarify** — The app asks follow-up questions to sharpen your query
-2. **Orchestrate** — A planner agent breaks the query into sub-tasks
-3. **Research** — Parallel sub-agents search Reddit posts, comments, and subreddits
-4. **Synthesize** — A final agent consolidates findings into a structured artifact (report)
-5. **History** — All research is saved and browsable
+| Step | What happens |
+|------|-------------|
+| **Clarify** | Follow-up questions sharpen your query |
+| **Orchestrate** | A planner agent breaks it into sub-tasks |
+| **Research** | Parallel sub-agents search Reddit posts and subreddits |
+| **Synthesize** | A final agent consolidates findings into a structured report |
+| **History** | All research is saved and browsable |
 
 ## Stack
 
 | Layer | Tech |
-|---|---|
-| Frontend | Next.js (React, TypeScript, Tailwind CSS) |
+|-------|------|
+| Frontend | Next.js, React, TypeScript, Tailwind CSS |
 | Backend | FastAPI, LangGraph |
 | Reddit access | MCP server (`packages/mcp-reddit`) |
 | Database | SQLite (`packages/db`) |
 
-## Project structure
-
-```
-apps/
-  client/     # Next.js frontend
-  research/   # FastAPI + LangGraph backend
-packages/
-  db/         # Shared SQLite layer
-  mcp-reddit/ # MCP server exposing Reddit tools to agents
-```
-
 ## Getting started
 
-### Docker
+### Docker (recommended)
 
 ```bash
 cp .env.example .env  # fill in your API keys
 docker compose up
 ```
 
-Frontend at `http://localhost:3000`, backend at `http://localhost:8000`.
+Frontend → `http://localhost:3000` · Backend → `http://localhost:8000`
 
 ### Manual
 
