@@ -31,6 +31,14 @@ jobs:
       - uses: astral-sh/setup-uv@v5
       - run: uv run --directory apps/research ruff check
 
+  test-research:
+    name: Test research
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+      - run: uv run --directory apps/research pytest tests/ -v
+
   build:
     name: Docker build
     runs-on: ubuntu-latest
