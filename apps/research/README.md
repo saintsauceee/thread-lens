@@ -1,6 +1,6 @@
 # Research API
 
-FastAPI backend that orchestrates a multi-agent research pipeline over Reddit.
+FastAPI backend that orchestrates a multi-agent deep research pipeline grounded by Reddit posts.
 
 ## How it works
 
