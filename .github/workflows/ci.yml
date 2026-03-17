@@ -37,7 +37,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v5
-      - run: uv run --directory apps/research pytest tests/ -v
+      - run: uv run --directory apps/research pytest tests/ -v --cov=research --cov-report=term-missing
 
   build:
     name: Docker build
