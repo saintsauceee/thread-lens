@@ -1,3 +1,7 @@
+![Thread Lens](./docs/images/threadlens-readme-banner-resized.png)
+
+<div align="center">
+
 <div align="center">
 
 <img src="./docs/images/threadlens-readme-banner-resized.png" width="180" />
