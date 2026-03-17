@@ -1,4 +1,5 @@
 import json
+from contextlib import ExitStack
 from unittest.mock import AsyncMock, MagicMock, patch
 
 
@@ -27,6 +28,7 @@ def make_patches(graph_events=None):
         "research.routes.research.update_artifact": AsyncMock(),
         "research.routes.research.complete_session": AsyncMock(),
         "research.routes.research.cancel_session": AsyncMock(),
+        "research.routes.research.append_findings": AsyncMock(),
     }
 
 
@@ -175,3 +177,121 @@ async def test_stream_follow_up_loads_existing_kb(client, mock_db):
     events = parse_sse(r.text)
     kb_event = next(e for e in events if e["type"] == "kb_id")
     assert kb_event["id"] == "kb-existing"
+
+
+def stream_request(client, patches, **params):
+    """Helper: apply all patches and make a stream GET request."""
+    with ExitStack() as stack:
+        for target, mock in patches.items():
+            stack.enter_context(patch(target, new=mock))
+        import asyncio
+        return asyncio.get_event_loop().run_until_complete(
+            client.get("/research/stream", params={"query": "test", **params})
+        )
+
+
+async def test_stream_orchestrator_spawning_event(client, mock_db):
+    graph_events = [
+        {"event": "on_chain_end", "name": "orchestrator", "run_id": "r1",
+         "data": {"output": {"tasks": ["task1"]}}, "parent_ids": []},
+    ]
+    patches = make_patches(graph_events)
+    with ExitStack() as stack:
+        for target, mock in patches.items():
+            stack.enter_context(patch(target, new=mock))
+        r = await client.get("/research/stream", params={"query": "test"})
+
+    types = [e["type"] for e in parse_sse(r.text)]
+    assert "orchestrator_phase" in types
+    phases = [e["phase"] for e in parse_sse(r.text) if e["type"] == "orchestrator_phase"]
+    assert "spawning" in phases
+
+
+async def test_stream_agent_spawned_event(client, mock_db):
+    graph_events = [
+        {"event": "on_chain_start", "name": "subagent", "run_id": "agent-run-1",
+         "data": {"input": {"current_task": {"topic": "keyboards"}, "round": 0}}, "parent_ids": []},
+    ]
+    patches = make_patches(graph_events)
+    with ExitStack() as stack:
+        for target, mock in patches.items():
+            stack.enter_context(patch(target, new=mock))
+        r = await client.get("/research/stream", params={"query": "test"})
+
+    events = parse_sse(r.text)
+    spawned = next((e for e in events if e["type"] == "agent_spawned"), None)
+    assert spawned is not None
+    assert spawned["task"] == "keyboards"
+    assert spawned["round"] == 1
+
+
+async def test_stream_tool_call_events(client, mock_db):
+    graph_events = [
+        {"event": "on_chain_start", "name": "subagent", "run_id": "agent-run-1",
+         "data": {"input": {"current_task": {"topic": "t"}, "round": 0}}, "parent_ids": []},
+        {"event": "on_tool_start", "name": "search_reddit", "run_id": "tool-run-1",
+         "data": {"input": {"query": "mechanical keyboards"}}, "parent_ids": ["agent-run-1"]},
+        {"event": "on_tool_end", "name": "search_reddit", "run_id": "tool-run-1",
+         "data": {"output": {}}, "parent_ids": ["agent-run-1"]},
+    ]
+    patches = make_patches(graph_events)
+    with ExitStack() as stack:
+        for target, mock in patches.items():
+            stack.enter_context(patch(target, new=mock))
+        r = await client.get("/research/stream", params={"query": "test"})
+
+    events = parse_sse(r.text)
+    tool_events = [e for e in events if e["type"] == "tool_call"]
+    assert any(e["status"] == "active" for e in tool_events)
+    assert any(e["status"] == "done" for e in tool_events)
+
+
+async def test_stream_agent_done_event(client, mock_db):
+    graph_events = [
+        {"event": "on_chain_start", "name": "subagent", "run_id": "agent-run-1",
+         "data": {"input": {"current_task": {"topic": "t"}, "round": 0}}, "parent_ids": []},
+        {"event": "on_chain_end", "name": "subagent", "run_id": "agent-run-1",
+         "data": {"output": {"results": [{"topic": "t", "findings": "f", "sources": ["url1"]}]}},
+         "parent_ids": []},
+    ]
+    patches = make_patches(graph_events)
+    with ExitStack() as stack:
+        for target, mock in patches.items():
+            stack.enter_context(patch(target, new=mock))
+        r = await client.get("/research/stream", params={"query": "test"})
+
+    events = parse_sse(r.text)
+    done_event = next((e for e in events if e["type"] == "agent_done"), None)
+    assert done_event is not None
+    assert done_event["sourceCount"] == 1
+
+
+async def test_stream_orchestrator_evaluating_event(client, mock_db):
+    graph_events = [
+        {"event": "on_chain_start", "name": "orchestrator", "run_id": "r1",
+         "data": {"input": {"results": [{"topic": "t", "findings": "f", "sources": []}]}},
+         "parent_ids": []},
+    ]
+    patches = make_patches(graph_events)
+    with ExitStack() as stack:
+        for target, mock in patches.items():
+            stack.enter_context(patch(target, new=mock))
+        r = await client.get("/research/stream", params={"query": "test"})
+
+    phases = [e["phase"] for e in parse_sse(r.text) if e["type"] == "orchestrator_phase"]
+    assert "evaluating" in phases
+
+
+async def test_stream_synthesizer_phase_event(client, mock_db):
+    graph_events = [
+        {"event": "on_chain_start", "name": "synthesizer", "run_id": "r1",
+         "data": {}, "parent_ids": []},
+    ]
+    patches = make_patches(graph_events)
+    with ExitStack() as stack:
+        for target, mock in patches.items():
+            stack.enter_context(patch(target, new=mock))
+        r = await client.get("/research/stream", params={"query": "test"})
+
+    phases = [e["phase"] for e in parse_sse(r.text) if e["type"] == "orchestrator_phase"]
+    assert "synthesizing" in phases
