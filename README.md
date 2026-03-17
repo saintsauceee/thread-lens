@@ -1,4 +1,4 @@
-<img src="./docs/images/threadlens-readme-banner-resized.png" width="900" />
+<img src="./docs/images/this-is-thread-lens.png" width="900" />
 
 # Thread Lens
 
