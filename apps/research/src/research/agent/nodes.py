@@ -130,7 +130,7 @@ async def orchestrator_node(state: ResearchState) -> dict:
         ], model_name)
         evaluation = _parse_json(response.content)
         gaps = [] if evaluation.get("sufficient") else evaluation.get("gaps", [])
-        return {"gaps": gaps}
+        return {"gaps": gaps, "round": 2 if gaps else state.get("round", 1)}
 
 
 async def subagent_node(state: ResearchState) -> dict:
