@@ -116,7 +116,7 @@ async def orchestrator_node(state: ResearchState) -> dict:
             {"role": "user", "content": user_content},
         ], model_name)
         tasks: list[ResearchTask] = _parse_json(response.content)
-        return {"tasks": tasks, "round": 1}
+        return {"tasks": tasks, "round": 1, "refocus_dispatched": True}
     else:
         # Evaluation mode: check if findings are sufficient
         if state.get("round", 1) >= 2 or state.get("refocus_dispatched"):
