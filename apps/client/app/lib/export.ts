@@ -56,58 +56,45 @@ export function downloadJSON(data: ExportData): void {
   );
 }
 
-export function exportPDF(query: string): void {
-  const el = document.querySelector('[data-artifact-content]');
+export function exportPDF(): void {
+  const el = document.querySelector('[data-artifact-content]') as HTMLElement | null;
   if (!el) return;
 
-  const win = window.open('', '_blank', 'width=900,height=700');
-  if (!win) return;
+  const ancestors: HTMLElement[] = [];
+  let node = el.parentElement;
+  while (node && node !== document.body) {
+    ancestors.push(node);
+    node = node.parentElement;
+  }
 
-  const safeQuery = query.replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  document.body.classList.add('__pdf-printing');
+  ancestors.forEach((a) => a.classList.add('__pdf-ancestor'));
+  el.classList.add('__pdf-target');
 
-  win.document.write(`<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="UTF-8">
-  <title>${safeQuery}</title>
-  <style>
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      max-width: 680px;
-      margin: 48px auto;
-      padding: 0 24px;
-      color: #111;
-      line-height: 1.6;
+  const style = document.createElement('style');
+  style.textContent = `
+    @media print {
+      body.__pdf-printing > *:not(.__pdf-ancestor):not(.__pdf-target) { display: none !important; }
+      .__pdf-ancestor {
+        display: block !important;
+        background: none !important;
+        border: none !important;
+        box-shadow: none !important;
+        border-radius: 0 !important;
+        overflow: visible !important;
+        padding: 0 !important;
+        margin: 0 !important;
+      }
+      .__pdf-ancestor > *:not(.__pdf-ancestor):not(.__pdf-target) { display: none !important; }
+      .__pdf-target { display: block !important; }
     }
-    h1 { font-size: 1.3em; font-weight: 600; margin: 0 0 4px; }
-    h2 {
-      font-size: 0.7em;
-      font-weight: 600;
-      text-transform: uppercase;
-      letter-spacing: 0.12em;
-      color: #888;
-      margin: 2em 0 0.75em;
-    }
-    h3 { font-size: 0.85em; font-weight: 600; color: #333; margin: 1.5em 0 0.5em; }
-    p { font-size: 0.875em; color: #444; margin: 0.4em 0; }
-    ul { margin: 0.5em 0; padding-left: 0; list-style: none; }
-    li { font-size: 0.875em; color: #444; margin: 0.3em 0; padding-left: 14px; position: relative; }
-    li::before { content: '·'; position: absolute; left: 0; color: #bbb; }
-    a { color: #4f46e5; word-break: break-all; }
-    hr { border: none; border-top: 1px solid #eee; margin: 1.5em 0; }
-    strong { font-weight: 600; color: #111; }
-    @media print { body { margin: 0; padding: 16px; } }
-  </style>
-</head>
-<body>
-${el.innerHTML}
-<script>
-  setTimeout(function() {
-    window.print();
-    window.onafterprint = function() { window.close(); };
-  }, 250);
-</script>
-</body>
-</html>`);
-  win.document.close();
+  `;
+  document.head.appendChild(style);
+
+  window.print();
+
+  style.remove();
+  document.body.classList.remove('__pdf-printing');
+  ancestors.forEach((a) => a.classList.remove('__pdf-ancestor'));
+  el.classList.remove('__pdf-target');
 }

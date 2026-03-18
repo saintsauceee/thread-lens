@@ -5,7 +5,7 @@ import { ExportData, downloadMarkdown, downloadJSON, exportPDF } from '../lib/ex
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000';
 
-export default function ExportButton({ kbId, query }: { kbId: string; query: string }) {
+export default function ExportButton({ kbId }: { kbId: string; query: string }) {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -47,7 +47,7 @@ export default function ExportButton({ kbId, query }: { kbId: string; query: str
 
   function handlePDF() {
     setOpen(false);
-    exportPDF(query);
+    exportPDF();
   }
 
   const options = [
