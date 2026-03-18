@@ -84,6 +84,23 @@ async def get_kb_endpoint(kb_id: str):
     return kb
 
 
+@router.get("/kb/{kb_id}/export")
+async def export_kb_endpoint(kb_id: str):
+    async with get_db() as db:
+        kb = await get_kb(db, kb_id)
+        if not kb:
+            raise HTTPException(status_code=404, detail="KB not found")
+        findings = await get_findings(db, kb_id)
+    sources = list({s for f in findings for s in f.get("sources", [])})
+    return {
+        "query": kb["query"],
+        "artifact": kb["artifact"],
+        "sources": sources,
+        "created_at": kb["created_at"],
+        "updated_at": kb["updated_at"],
+    }
+
+
 @router.get("/stream")
 async def stream_research(
     query: str,

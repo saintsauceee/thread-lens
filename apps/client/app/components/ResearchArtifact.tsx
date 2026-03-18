@@ -4,35 +4,51 @@ import { useEffect, useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { ResearchArtifact as ArtifactData } from '../lib/types';
+import ExportButton from './ExportButton';
 
-export default function ResearchArtifact({ artifact }: { artifact: ArtifactData }) {
+export default function ResearchArtifact({
+  artifact,
+  query,
+  kbId,
+}: {
+  artifact: ArtifactData;
+  query?: string;
+  kbId?: string;
+}) {
   const [visible, setVisible] = useState(false);
 
   useEffect(() => {
     requestAnimationFrame(() => setVisible(true));
   }, []);
 
+  const metaPills = [
+    artifact.agentCount != null && `${artifact.agentCount} agents`,
+    artifact.sourceCount != null && `${artifact.sourceCount} sources`,
+    artifact.durationSec != null && `${artifact.durationSec}s`,
+  ].filter(Boolean) as string[];
+
   return (
     <div
       className="transition-all duration-700 ease-out"
       style={{ opacity: visible ? 1 : 0, transform: visible ? 'translateY(0)' : 'translateY(12px)' }}
     >
-      {(artifact.agentCount != null || artifact.sourceCount != null || artifact.durationSec != null) && (
+      {(metaPills.length > 0 || (kbId && query)) && (
         <div className="flex items-center gap-2 mb-5">
-          {[
-            artifact.agentCount != null && `${artifact.agentCount} agents`,
-            artifact.sourceCount != null && `${artifact.sourceCount} sources`,
-            artifact.durationSec != null && `${artifact.durationSec}s`,
-          ].filter(Boolean).map((label) => (
-            <span key={label as string} className="text-[12px] font-medium text-neutral-500 bg-white border border-neutral-200 px-3 py-1 rounded-full shadow-sm">
+          {metaPills.map((label) => (
+            <span key={label} className="text-[12px] font-medium text-neutral-500 bg-white border border-neutral-200 px-3 py-1 rounded-full shadow-sm">
               {label}
             </span>
           ))}
+          {kbId && query && (
+            <div className="ml-auto">
+              <ExportButton kbId={kbId} query={query} />
+            </div>
+          )}
         </div>
       )}
 
       <div className="bg-white border border-neutral-200 rounded-2xl shadow-sm overflow-hidden">
-        <div className="px-8 py-7 space-y-6">
+        <div className="px-8 py-7 space-y-6" data-artifact-content>
           <ReactMarkdown
             remarkPlugins={[remarkGfm]}
             components={{

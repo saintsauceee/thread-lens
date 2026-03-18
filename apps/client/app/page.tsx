@@ -167,6 +167,7 @@ function ResearchView({
   previousAgents,
   artifact,
   cancelled,
+  query,
   kbId,
   sidebarRefreshKey,
   activeStatus,
@@ -181,6 +182,7 @@ function ResearchView({
   previousAgents: SubAgent[];
   artifact: ArtifactData | null;
   cancelled: boolean;
+  query: string;
   kbId: string | null;
   sidebarRefreshKey: number;
   activeStatus: 'running' | 'cancelled' | undefined;
@@ -216,7 +218,7 @@ function ResearchView({
             <AgentsSection agents={agents} previousAgents={previousAgents} cancelled={cancelled} />
           )}
 
-          {artifact && <ResearchArtifact artifact={artifact} />}
+          {artifact && <ResearchArtifact artifact={artifact} query={kbId ? query : undefined} kbId={kbId ?? undefined} />}
           {artifact && !isResearching && <FollowUpInput onSubmit={onFollowUp} />}
           {!artifact && !isResearching && (
             <p className="text-[13px] text-neutral-400 mt-2">No report was generated.</p>
@@ -604,6 +606,7 @@ export default function Home() {
         previousAgents={previousAgents}
         artifact={artifact}
         cancelled={cancelled}
+        query={query}
         kbId={kbId}
         sidebarRefreshKey={sidebarRefreshKey}
         activeStatus={cancelled ? 'cancelled' : appPhase === 'researching' ? 'running' : undefined}
