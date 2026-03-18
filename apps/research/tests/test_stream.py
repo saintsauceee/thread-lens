@@ -29,6 +29,8 @@ def make_patches(graph_events=None):
         "research.routes.research.complete_session": AsyncMock(),
         "research.routes.research.cancel_session": AsyncMock(),
         "research.routes.research.append_findings": AsyncMock(),
+        "research.routes.research.save_agent": AsyncMock(),
+        "research.routes.research.update_agent_source_count": AsyncMock(),
     }
 
 

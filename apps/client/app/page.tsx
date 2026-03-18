@@ -108,17 +108,14 @@ function AgentGrid({ agents, cancelled }: { agents: SubAgent[]; cancelled?: bool
 }
 
 function AgentsSection({ agents, previousAgents, cancelled, isComplete }: { agents: SubAgent[]; previousAgents: SubAgent[]; cancelled?: boolean; isComplete?: boolean }) {
-  const [expanded, setExpanded] = useState(!isComplete);
-
-  useEffect(() => {
-    if (isComplete) setExpanded(false);
-  }, [isComplete]);
+  const [userExpanded, setUserExpanded] = useState<boolean | null>(null);
+  const expanded = userExpanded ?? !isComplete;
   const doneCount = agents.filter((a) => a.status === 'done').length;
 
   return (
     <div className="mb-4">
       <button
-        onClick={() => setExpanded((v) => !v)}
+        onClick={() => setUserExpanded(!expanded)}
         className="w-full flex items-center gap-3 mb-3 group"
       >
         <div className="flex-1 h-px bg-neutral-200" />
