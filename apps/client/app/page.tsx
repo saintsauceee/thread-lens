@@ -107,8 +107,12 @@ function AgentGrid({ agents, cancelled }: { agents: SubAgent[]; cancelled?: bool
   );
 }
 
-function AgentsSection({ agents, previousAgents, cancelled }: { agents: SubAgent[]; previousAgents: SubAgent[]; cancelled?: boolean }) {
-  const [expanded, setExpanded] = useState(true);
+function AgentsSection({ agents, previousAgents, cancelled, isComplete }: { agents: SubAgent[]; previousAgents: SubAgent[]; cancelled?: boolean; isComplete?: boolean }) {
+  const [expanded, setExpanded] = useState(!isComplete);
+
+  useEffect(() => {
+    if (isComplete) setExpanded(false);
+  }, [isComplete]);
   const doneCount = agents.filter((a) => a.status === 'done').length;
 
   return (
@@ -134,28 +138,30 @@ function AgentsSection({ agents, previousAgents, cancelled }: { agents: SubAgent
 
       <div
         style={{
-          maxHeight: expanded ? '9999px' : 0,
-          overflow: 'hidden',
+          display: 'grid',
+          gridTemplateRows: expanded ? '1fr' : '0fr',
           opacity: expanded ? 1 : 0,
-          transition: 'max-height 0.4s ease, opacity 0.3s ease',
+          transition: 'grid-template-rows 0.35s ease, opacity 0.25s ease',
         }}
       >
-        {previousAgents.length > 0 && (
-          <>
-            <AgentGrid agents={previousAgents} />
-            <div className="flex items-center gap-3 my-6">
-              <div className="flex-1 h-px bg-violet-200" />
-              <span className="flex items-center gap-1.5 text-[11px] font-semibold text-violet-500 uppercase tracking-widest shrink-0">
-                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M3 12h18M3 6h18M3 18h18" />
-                </svg>
-                Refocused
-              </span>
-              <div className="flex-1 h-px bg-violet-200" />
-            </div>
-          </>
-        )}
-        <AgentGrid agents={agents} cancelled={cancelled} />
+        <div style={{ minHeight: 0, overflow: 'hidden' }}>
+          {previousAgents.length > 0 && (
+            <>
+              <AgentGrid agents={previousAgents} />
+              <div className="flex items-center gap-3 my-6">
+                <div className="flex-1 h-px bg-violet-200" />
+                <span className="flex items-center gap-1.5 text-[11px] font-semibold text-violet-500 uppercase tracking-widest shrink-0">
+                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M3 12h18M3 6h18M3 18h18" />
+                  </svg>
+                  Refocused
+                </span>
+                <div className="flex-1 h-px bg-violet-200" />
+              </div>
+            </>
+          )}
+          <AgentGrid agents={agents} cancelled={cancelled} />
+        </div>
       </div>
     </div>
   );
@@ -215,7 +221,7 @@ function ResearchView({
           />
 
           {(agents.length > 0 || previousAgents.length > 0) && (
-            <AgentsSection agents={agents} previousAgents={previousAgents} cancelled={cancelled} />
+            <AgentsSection agents={agents} previousAgents={previousAgents} cancelled={cancelled} isComplete={!!artifact} />
           )}
 
           {artifact && <ResearchArtifact artifact={artifact} query={kbId ? query : undefined} kbId={kbId ?? undefined} />}
