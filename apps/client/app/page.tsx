@@ -375,18 +375,34 @@ export default function Home() {
   async function handleHistorySelect(entry: HistoryEntry) {
     esRef.current?.close();
     try {
-      const res = await fetch(`${API_BASE}/research/kb/${entry.id}`);
-      if (!res.ok) return;
-      const kb = await res.json();
+      const [kbRes, agentsRes] = await Promise.all([
+        fetch(`${API_BASE}/research/kb/${entry.id}`),
+        fetch(`${API_BASE}/research/kb/${entry.id}/agents`),
+      ]);
+      if (!kbRes.ok) return;
+      const kb = await kbRes.json();
+      const agentsData = agentsRes.ok ? await agentsRes.json() : { agents: [], agentCount: 0, sourceCount: 0, durationSec: null };
+
       const wasCancelled = kb.status === 'cancelled';
       setQuery(kb.query);
       setKbId(kb.id);
-      setAgents([]);
+      setAgents(agentsData.agents.map((a: { id: number; task: string; round: 1 | 2; sourceCount: number | null; status: 'done' }) => ({
+        id: a.id,
+        task: a.task,
+        status: 'done' as const,
+        toolCalls: [],
+        sourceCount: a.sourceCount,
+        round: a.round,
+      })));
       setPreviousAgents([]);
       setCancelled(wasCancelled);
-
       setOrchestratorPhase('done');
-      setArtifact(kb.artifact ? { rawMarkdown: kb.artifact } : null);
+      setArtifact(kb.artifact ? {
+        rawMarkdown: kb.artifact,
+        agentCount: agentsData.agentCount,
+        sourceCount: agentsData.sourceCount,
+        durationSec: agentsData.durationSec,
+      } : null);
       setAppPhase('complete');
     } catch {}
   }

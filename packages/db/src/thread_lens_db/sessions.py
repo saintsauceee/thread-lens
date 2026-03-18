@@ -22,10 +22,10 @@ async def create_session(
     return {"id": session_id, "kb_id": kb_id, "follow_up": follow_up, "created_at": now}
 
 
-async def complete_session(db: aiosqlite.Connection, session_id: str) -> None:
+async def complete_session(db: aiosqlite.Connection, session_id: str, duration_sec: float | None = None) -> None:
     await db.execute(
-        "UPDATE sessions SET completed_at = ? WHERE id = ?",
-        (_now(), session_id),
+        "UPDATE sessions SET completed_at = ?, duration_sec = ? WHERE id = ?",
+        (_now(), duration_sec, session_id),
     )
     await db.commit()
 

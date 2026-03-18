@@ -14,8 +14,11 @@ from thread_lens_db import (
     get_db,
     get_findings,
     get_kb,
+    get_kb_agents,
     get_session_findings,
     list_kbs,
+    save_agent,
+    update_agent_source_count,
     update_artifact,
 )
 
@@ -82,6 +85,40 @@ async def get_kb_endpoint(kb_id: str):
     if not kb:
         raise HTTPException(status_code=404, detail="KB not found")
     return kb
+
+
+@router.get("/kb/{kb_id}/agents")
+async def get_kb_agents_endpoint(kb_id: str):
+    async with get_db() as db:
+        kb = await get_kb(db, kb_id)
+        if not kb:
+            raise HTTPException(status_code=404, detail="KB not found")
+        raw_agents = await get_kb_agents(db, kb_id)
+        # Fetch duration from most recent completed session
+        async with db.execute(
+            "SELECT duration_sec FROM sessions WHERE kb_id = ? AND completed_at IS NOT NULL ORDER BY completed_at DESC LIMIT 1",
+            (kb_id,),
+        ) as cur:
+            row = await cur.fetchone()
+        duration_sec = row["duration_sec"] if row else None
+
+    agents = [
+        {
+            "id": a["agent_index"],
+            "task": a["task"],
+            "round": a["round"],
+            "sourceCount": a["source_count"],
+            "status": "done",
+        }
+        for a in raw_agents
+    ]
+    total_sources = sum(a["sourceCount"] or 0 for a in agents)
+    return {
+        "agents": agents,
+        "agentCount": len(agents),
+        "sourceCount": total_sources,
+        "durationSec": duration_sec,
+    }
 
 
 @router.get("/kb/{kb_id}/export")
@@ -189,10 +226,12 @@ async def stream_research(
                         task = inp.get("current_task", {})
                         round_num = 2 if inp.get("round", 0) >= 2 else 1
 
+                        task_topic = task.get("topic", "Researching…")
+                        await save_agent(db, active_kb_id, new_session_id, agent_id, task_topic, round_num)
                         yield emit({
                             "type": "agent_spawned",
                             "id": agent_id,
-                            "task": task.get("topic", "Researching…"),
+                            "task": task_topic,
                             "round": round_num,
                         })
 
@@ -242,6 +281,7 @@ async def stream_research(
                             if results:
                                 await append_findings(db, active_kb_id, new_session_id, results)
 
+                            await update_agent_source_count(db, new_session_id, agent_id, source_count)
                             yield emit({
                                 "type": "agent_done",
                                 "agentId": agent_id,
@@ -263,7 +303,7 @@ async def stream_research(
                         duration = round(asyncio.get_event_loop().time() - start, 1)
 
                         await update_artifact(db, active_kb_id, artifact)
-                        await complete_session(db, new_session_id)
+                        await complete_session(db, new_session_id, duration)
                         session_completed = True
 
                         yield emit({
