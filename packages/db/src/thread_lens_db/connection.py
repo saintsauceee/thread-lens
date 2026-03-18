@@ -30,8 +30,19 @@ CREATE TABLE IF NOT EXISTS sessions (
     created_at TEXT NOT NULL,
     completed_at TEXT
 );
+CREATE TABLE IF NOT EXISTS agents (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    kb_id TEXT NOT NULL REFERENCES knowledge_bases(id) ON DELETE CASCADE,
+    session_id TEXT NOT NULL,
+    agent_index INTEGER NOT NULL,
+    task TEXT NOT NULL,
+    round INTEGER NOT NULL,
+    source_count INTEGER,
+    created_at TEXT NOT NULL
+);
 CREATE INDEX IF NOT EXISTS findings_kb_id ON findings(kb_id);
 CREATE INDEX IF NOT EXISTS sessions_kb_id ON sessions(kb_id);
+CREATE INDEX IF NOT EXISTS agents_kb_id ON agents(kb_id);
 """
 
 
@@ -40,6 +51,11 @@ async def init_db() -> None:
         await db.executescript(_SCHEMA)
         try:
             await db.execute("ALTER TABLE sessions ADD COLUMN cancelled_at TEXT")
+            await db.commit()
+        except Exception:
+            pass
+        try:
+            await db.execute("ALTER TABLE sessions ADD COLUMN duration_sec REAL")
             await db.commit()
         except Exception:
             pass
