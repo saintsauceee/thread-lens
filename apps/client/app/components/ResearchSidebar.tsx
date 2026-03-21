@@ -60,47 +60,89 @@ export default function ResearchSidebar({
   }, [refreshKey]);
 
   return (
-    <aside className="w-[260px] shrink-0 h-screen sticky top-0 flex flex-col bg-white" style={{ borderRight: '1px solid #ebebeb' }}>
-
+    <aside
+      style={{
+        width: '248px',
+        flexShrink: 0,
+        height: '100vh',
+        position: 'sticky',
+        top: 0,
+        display: 'flex',
+        flexDirection: 'column',
+        background: 'rgba(10,12,20,0.75)',
+        backdropFilter: 'blur(24px)',
+        WebkitBackdropFilter: 'blur(24px)',
+        borderRight: '1px solid rgba(255,255,255,0.06)',
+      }}
+    >
       {/* Header */}
-      <div className="px-3 pt-4 pb-3 flex flex-col gap-4">
+      <div style={{ padding: '16px 12px 12px' }}>
         <button
           onClick={onNew}
-          className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-neutral-600 hover:text-neutral-800 transition-colors"
-          style={{ background: '#f3f4f6', border: '1px solid #e5e7eb' }}
-          onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = '#ebebec'}
-          onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = '#f3f4f6'}
+          style={{
+            width: '100%',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            padding: '8px 12px',
+            borderRadius: '10px',
+            background: 'rgba(255,255,255,0.05)',
+            border: '1px solid rgba(255,255,255,0.07)',
+            color: 'rgba(255,255,255,0.6)',
+            cursor: 'pointer',
+            transition: 'background 0.15s, color 0.15s',
+            fontSize: '12px',
+            fontWeight: 500,
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.background = 'rgba(255,255,255,0.08)';
+            e.currentTarget.style.color = 'rgba(255,255,255,0.85)';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.background = 'rgba(255,255,255,0.05)';
+            e.currentTarget.style.color = 'rgba(255,255,255,0.6)';
+          }}
         >
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="shrink-0">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
             <path d="M12 5v14M5 12h14" />
           </svg>
-          <span className="text-[12px] font-medium">New research</span>
+          New research
         </button>
-        <span className="text-[10.5px] font-medium text-neutral-400 px-1">History</span>
+
+        <p style={{ fontSize: '10px', fontWeight: 600, color: 'rgba(255,255,255,0.25)', letterSpacing: '0.1em', textTransform: 'uppercase', marginTop: '16px', paddingLeft: '4px' }}>
+          History
+        </p>
       </div>
 
       {/* Items */}
-      <div className="flex-1 overflow-y-auto px-2" style={{ scrollbarWidth: 'none' }}>
+      <div style={{ flex: 1, overflowY: 'auto', padding: '0 8px', scrollbarWidth: 'none' }}>
         {pendingQuery && (
           <div
-            className="px-2 py-2 rounded-md mb-1 flex flex-col gap-0.5"
-            style={{ background: '#fffbeb', border: '1px solid #fcd34d' }}
+            style={{
+              padding: '8px 10px',
+              borderRadius: '8px',
+              marginBottom: '2px',
+              background: 'rgba(251,191,36,0.08)',
+              border: '1px solid rgba(251,191,36,0.2)',
+            }}
           >
-            <span className="text-[12.5px] leading-snug truncate text-amber-900 font-medium">{pendingQuery}</span>
-            <span className="flex items-center gap-1 text-[11px] text-amber-500">
-              <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse inline-block" />
+            <span style={{ fontSize: '12px', lineHeight: 1.4, display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: 'rgba(251,191,36,0.9)', fontWeight: 500 }}>{pendingQuery}</span>
+            <span style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '10.5px', color: 'rgba(251,191,36,0.6)', marginTop: '3px' }}>
+              <span style={{ width: '5px', height: '5px', borderRadius: '50%', background: 'rgba(251,191,36,0.7)', display: 'inline-block', animation: 'pulse 2s infinite' }} />
               preparing
             </span>
           </div>
         )}
+
         {entries.length === 0 && !pendingQuery ? (
-          <p className="text-[12px] text-neutral-300 px-2 py-1">No research yet</p>
+          <p style={{ fontSize: '12px', color: 'rgba(255,255,255,0.18)', padding: '8px 10px' }}>No research yet</p>
         ) : (
           entries.map((entry) => {
             const active = entry.id === currentKbId;
             const resolvedStatus = active ? (activeStatus ?? (entry.status === 'cancelled' ? 'cancelled' : undefined)) : entry.status;
             const isCancelled = resolvedStatus === 'cancelled';
             const isRunning = resolvedStatus === 'running';
+
             return (
               <div
                 key={entry.id}
@@ -110,44 +152,84 @@ export default function ResearchSidebar({
                 onKeyDown={(e) => e.key === 'Enter' && onSelect(entry)}
                 onMouseEnter={() => setHoveredId(entry.id)}
                 onMouseLeave={() => setHoveredId(null)}
-                className={`w-full text-left px-2 py-2 rounded-md mb-px flex items-start gap-1 transition-colors cursor-pointer ${
-                  active ? (isCancelled ? 'bg-red-50' : 'bg-indigo-50') : 'hover:bg-neutral-50'
-                }`}
-                style={{ border: `1px solid ${isRunning ? '#a5b4fc' : isCancelled ? '#fca5a5' : 'transparent'}` }}
+                style={{
+                  width: '100%',
+                  textAlign: 'left',
+                  padding: '8px 10px',
+                  borderRadius: '8px',
+                  marginBottom: '1px',
+                  display: 'flex',
+                  alignItems: 'flex-start',
+                  gap: '6px',
+                  cursor: 'pointer',
+                  transition: 'background 0.15s',
+                  background: active
+                    ? isCancelled
+                      ? 'rgba(248,113,113,0.07)'
+                      : isRunning
+                      ? 'rgba(99,102,241,0.1)'
+                      : 'rgba(99,102,241,0.08)'
+                    : hoveredId === entry.id
+                    ? 'rgba(255,255,255,0.04)'
+                    : 'transparent',
+                  border: `1px solid ${
+                    isRunning
+                      ? 'rgba(99,102,241,0.3)'
+                      : isCancelled && active
+                      ? 'rgba(248,113,113,0.2)'
+                      : active
+                      ? 'rgba(99,102,241,0.2)'
+                      : 'transparent'
+                  }`,
+                }}
               >
-                <div className="flex-1 min-w-0 flex flex-col gap-0.5">
-                  <span className={`text-[12.5px] leading-snug truncate ${
-                    active ? (isCancelled ? 'text-red-700 font-medium' : 'text-indigo-700 font-medium') : 'text-neutral-600'
-                  }`}>
+                <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                  <span
+                    style={{
+                      fontSize: '12.5px',
+                      lineHeight: 1.35,
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap',
+                      color: active
+                        ? isCancelled
+                          ? 'rgba(248,113,113,0.9)'
+                          : 'rgba(165,168,255,0.95)'
+                        : 'rgba(255,255,255,0.55)',
+                      fontWeight: active ? 500 : 400,
+                    }}
+                  >
                     {entry.query}
                   </span>
+
                   {isRunning ? (
-                    <span className="flex items-center gap-1 text-[11px] text-indigo-400">
-                      <span className="w-1.5 h-1.5 rounded-full bg-indigo-400 animate-pulse inline-block" />
+                    <span style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '10.5px', color: 'rgba(129,140,248,0.7)' }}>
+                      <span style={{ width: '5px', height: '5px', borderRadius: '50%', background: '#818cf8', display: 'inline-block', animation: 'pulse 2s infinite' }} />
                       in progress
                     </span>
                   ) : isCancelled ? (
-                    <span className="flex items-center gap-1 text-[11px] text-red-400">
-                      <span className="w-1.5 h-1.5 rounded-full bg-red-400 inline-block" />
+                    <span style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '10.5px', color: 'rgba(248,113,113,0.6)' }}>
+                      <span style={{ width: '5px', height: '5px', borderRadius: '50%', background: '#f87171', display: 'inline-block' }} />
                       cancelled
                     </span>
                   ) : (
-                    <span className={`text-[11px] ${active ? 'text-indigo-400' : 'text-neutral-300'}`}>
+                    <span style={{ fontSize: '10.5px', color: active ? 'rgba(129,140,248,0.5)' : 'rgba(255,255,255,0.2)' }}>
                       {timeAgo(entry.updatedAt)}
                     </span>
                   )}
                 </div>
+
                 {confirmId === entry.id ? (
-                  <div className="shrink-0 self-center flex gap-1" onClick={(e) => e.stopPropagation()}>
+                  <div style={{ flexShrink: 0, alignSelf: 'center', display: 'flex', gap: '4px' }} onClick={(e) => e.stopPropagation()}>
                     <button
                       onClick={(e) => { e.stopPropagation(); setConfirmId(null); }}
-                      className="text-[10px] font-medium text-neutral-400 hover:text-neutral-600 px-1.5 py-0.5 rounded transition-colors"
+                      style={{ fontSize: '10px', fontWeight: 500, color: 'rgba(255,255,255,0.35)', padding: '2px 6px', borderRadius: '4px', background: 'transparent', cursor: 'pointer' }}
                     >
                       Cancel
                     </button>
                     <button
                       onClick={(e) => { e.stopPropagation(); confirmDelete(); }}
-                      className="text-[10px] font-medium text-white bg-red-500 hover:bg-red-600 px-1.5 py-0.5 rounded transition-colors"
+                      style={{ fontSize: '10px', fontWeight: 600, color: 'white', background: 'rgba(239,68,68,0.8)', padding: '2px 6px', borderRadius: '4px', cursor: 'pointer' }}
                     >
                       Delete
                     </button>
@@ -155,9 +237,26 @@ export default function ResearchSidebar({
                 ) : hoveredId === entry.id && (
                   <button
                     onClick={(e) => handleDeleteClick(e, entry.id)}
-                    className="shrink-0 self-center p-1 rounded-md text-neutral-300 hover:text-red-400 hover:bg-red-50 transition-colors"
+                    style={{
+                      flexShrink: 0,
+                      alignSelf: 'center',
+                      padding: '4px',
+                      borderRadius: '6px',
+                      color: 'rgba(255,255,255,0.2)',
+                      background: 'transparent',
+                      cursor: 'pointer',
+                      transition: 'color 0.15s, background 0.15s',
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.color = 'rgba(248,113,113,0.8)';
+                      e.currentTarget.style.background = 'rgba(248,113,113,0.08)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.color = 'rgba(255,255,255,0.2)';
+                      e.currentTarget.style.background = 'transparent';
+                    }}
                   >
-                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                       <polyline points="3 6 5 6 21 6" />
                       <path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6" />
                       <path d="M10 11v6M14 11v6" />
@@ -172,16 +271,25 @@ export default function ResearchSidebar({
       </div>
 
       {/* Footer */}
-      <div className="px-4 py-3.5">
+      <div style={{ padding: '12px 16px', borderTop: '1px solid rgba(255,255,255,0.05)' }}>
         <button
           onClick={() => window.dispatchEvent(new KeyboardEvent('keydown', { key: 'k', metaKey: true, bubbles: true }))}
-          className="flex items-center gap-1.5 text-neutral-300 hover:text-neutral-500 transition-colors"
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '6px',
+            color: 'rgba(255,255,255,0.2)',
+            background: 'transparent',
+            cursor: 'pointer',
+            transition: 'color 0.15s',
+          }}
+          onMouseEnter={(e) => { e.currentTarget.style.color = 'rgba(255,255,255,0.45)'; }}
+          onMouseLeave={(e) => { e.currentTarget.style.color = 'rgba(255,255,255,0.2)'; }}
         >
-          <kbd className="text-[9.5px] bg-neutral-100 border border-neutral-200 px-1.5 py-0.5 rounded font-medium">⌘K</kbd>
-          <span className="text-[11px]">Search history</span>
+          <kbd style={{ fontSize: '10px', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', padding: '2px 6px', borderRadius: '5px', fontWeight: 600, color: 'inherit' }}>⌘K</kbd>
+          <span style={{ fontSize: '11px' }}>Search history</span>
         </button>
       </div>
-
     </aside>
   );
 }

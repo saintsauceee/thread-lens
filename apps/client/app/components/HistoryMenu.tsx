@@ -63,7 +63,6 @@ export default function HistoryMenu({
     ? entries.filter((e) => e.query.toLowerCase().includes(query.toLowerCase()))
     : entries;
 
-
   useEffect(() => {
     if (!open) return;
     function onKey(e: KeyboardEvent) {
@@ -94,21 +93,33 @@ export default function HistoryMenu({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-start justify-center pt-[12vh] px-4"
       style={{
-        background: visible ? 'rgba(0,0,0,0.45)' : 'rgba(0,0,0,0)',
-        backdropFilter: visible ? 'blur(6px)' : 'blur(0px)',
+        position: 'fixed',
+        inset: 0,
+        zIndex: 50,
+        display: 'flex',
+        alignItems: 'flex-start',
+        justifyContent: 'center',
+        paddingTop: '12vh',
+        paddingLeft: '16px',
+        paddingRight: '16px',
+        background: visible ? 'rgba(0,0,0,0.65)' : 'rgba(0,0,0,0)',
+        backdropFilter: visible ? 'blur(12px)' : 'blur(0px)',
         transition: 'background 0.2s ease, backdrop-filter 0.2s ease',
       }}
       onClick={onClose}
     >
       <div
-        className="w-full flex flex-col overflow-hidden"
         style={{
+          width: '100%',
           maxWidth: '620px',
-          background: 'rgba(255,255,255,0.97)',
-          borderRadius: '18px',
-          boxShadow: '0 32px 80px rgba(0,0,0,0.28), 0 0 0 1px rgba(0,0,0,0.06)',
+          display: 'flex',
+          flexDirection: 'column',
+          overflow: 'hidden',
+          background: 'rgba(14,16,24,0.95)',
+          border: '1px solid rgba(255,255,255,0.1)',
+          borderRadius: '20px',
+          boxShadow: '0 32px 80px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.04), inset 0 1px 0 rgba(255,255,255,0.07)',
           transform: visible ? 'translateY(0) scale(1)' : 'translateY(-12px) scale(0.97)',
           opacity: visible ? 1 : 0,
           transition: 'transform 0.22s cubic-bezier(0.34,1.56,0.64,1), opacity 0.18s ease',
@@ -117,8 +128,8 @@ export default function HistoryMenu({
         onClick={(e) => e.stopPropagation()}
       >
         {/* Search bar */}
-        <div className="flex items-center gap-3 px-5 py-4 border-b border-neutral-100">
-          <svg className="text-neutral-400 shrink-0" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '16px 20px', borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
+          <svg style={{ color: 'rgba(255,255,255,0.3)', flexShrink: 0 }} width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
             <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
           </svg>
           <input
@@ -126,47 +137,58 @@ export default function HistoryMenu({
             value={query}
             onChange={(e) => { setQuery(e.target.value); setActive(0); }}
             placeholder="Search research history…"
-            className="flex-1 text-[14px] text-neutral-800 placeholder:text-neutral-400 bg-transparent outline-none"
+            style={{
+              flex: 1,
+              fontSize: '14px',
+              color: 'rgba(255,255,255,0.85)',
+              background: 'transparent',
+              outline: 'none',
+            }}
+            className="placeholder:text-white/25"
           />
-          <kbd className="text-[10px] font-medium text-neutral-400 bg-neutral-100 px-1.5 py-0.5 rounded-md shrink-0">esc</kbd>
+          <kbd style={{ fontSize: '10px', fontWeight: 600, color: 'rgba(255,255,255,0.25)', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.08)', padding: '3px 8px', borderRadius: '6px', flexShrink: 0 }}>esc</kbd>
         </div>
 
         {/* List */}
-        <div ref={listRef} className="overflow-y-auto overscroll-contain" style={{ maxHeight: 'calc(70vh - 60px)' }}>
+        <div ref={listRef} style={{ overflowY: 'auto', maxHeight: 'calc(70vh - 60px)', overscrollBehavior: 'contain' }}>
           {filtered.length === 0 ? (
-            <div className="py-12 text-center">
-              <p className="text-[13px] text-neutral-400">{query ? 'No results' : 'No research history yet'}</p>
+            <div style={{ padding: '48px 0', textAlign: 'center' }}>
+              <p style={{ fontSize: '13px', color: 'rgba(255,255,255,0.25)' }}>{query ? 'No results' : 'No research history yet'}</p>
             </div>
           ) : (
             filtered.map((entry, i) => {
               const isCurrent = entry.id === currentKbId;
-              const isActive = i === active;
+              const isActiveRow = i === active;
               return (
                 <button
                   key={entry.id}
                   onMouseEnter={() => setActive(i)}
                   onClick={() => { onSelect(entry); onClose(); }}
-                  className="w-full text-left px-5 py-3.5 flex items-start gap-4 transition-colors"
                   style={{
-                    background: isActive ? 'rgba(99,102,241,0.06)' : 'transparent',
-                    borderLeft: `3px solid ${isCurrent ? '#6366f1' : 'transparent'}`,
+                    width: '100%',
+                    textAlign: 'left',
+                    padding: '12px 20px',
+                    display: 'flex',
+                    alignItems: 'flex-start',
+                    gap: '16px',
+                    transition: 'background 0.1s',
+                    background: isActiveRow ? 'rgba(99,102,241,0.08)' : 'transparent',
+                    borderLeft: `3px solid ${isCurrent ? 'rgba(99,102,241,0.7)' : 'transparent'}`,
+                    cursor: 'pointer',
                   }}
                 >
-                  <div className="flex-1 min-w-0 flex flex-col gap-0.5">
-                    <p
-                      className="text-[13px] font-semibold leading-snug truncate"
-                      style={{ color: isActive ? '#4338ca' : '#171717' }}
-                    >
+                  <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: '3px' }}>
+                    <p style={{ fontSize: '13.5px', fontWeight: 600, lineHeight: 1.3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: isActiveRow ? 'rgba(165,168,255,0.95)' : 'rgba(255,255,255,0.8)' }}>
                       {entry.query}
                     </p>
                     {entry.preview && (
-                      <p className="text-[12px] text-neutral-400 leading-relaxed line-clamp-2">{entry.preview}</p>
+                      <p style={{ fontSize: '12px', color: 'rgba(255,255,255,0.28)', lineHeight: 1.5, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{entry.preview}</p>
                     )}
                   </div>
-                  <div className="flex flex-col items-end gap-1.5 shrink-0 pt-0.5">
-                    <span className="text-[11px] text-neutral-400 whitespace-nowrap">{timeAgo(entry.updatedAt)}</span>
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '6px', flexShrink: 0, paddingTop: '2px' }}>
+                    <span style={{ fontSize: '11px', color: 'rgba(255,255,255,0.25)', whiteSpace: 'nowrap' }}>{timeAgo(entry.updatedAt)}</span>
                     {isCurrent && (
-                      <span className="text-[10px] font-semibold text-indigo-500 bg-indigo-50 px-1.5 py-0.5 rounded-full">current</span>
+                      <span style={{ fontSize: '10px', fontWeight: 700, color: 'rgba(129,140,248,0.9)', background: 'rgba(99,102,241,0.15)', border: '1px solid rgba(99,102,241,0.25)', padding: '2px 7px', borderRadius: '20px' }}>current</span>
                     )}
                   </div>
                 </button>
@@ -177,14 +199,16 @@ export default function HistoryMenu({
 
         {/* Footer */}
         {filtered.length > 0 && (
-          <div className="flex items-center gap-4 px-5 py-2.5 border-t border-neutral-100">
-            <span className="flex items-center gap-1 text-[11px] text-neutral-400">
-              <kbd className="bg-neutral-100 px-1 py-0.5 rounded text-[10px]">↑↓</kbd> navigate
+          <div style={{ display: 'flex', alignItems: 'center', gap: '16px', padding: '10px 20px', borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+            <span style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '11px', color: 'rgba(255,255,255,0.2)' }}>
+              <kbd style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.08)', padding: '1px 5px', borderRadius: '4px', fontSize: '10px' }}>↑↓</kbd>
+              navigate
             </span>
-            <span className="flex items-center gap-1 text-[11px] text-neutral-400">
-              <kbd className="bg-neutral-100 px-1 py-0.5 rounded text-[10px]">↵</kbd> open
+            <span style={{ display: 'flex', alignItems: 'center', gap: '5px', fontSize: '11px', color: 'rgba(255,255,255,0.2)' }}>
+              <kbd style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.08)', padding: '1px 5px', borderRadius: '4px', fontSize: '10px' }}>↵</kbd>
+              open
             </span>
-            <span className="ml-auto text-[11px] text-neutral-400">{filtered.length} artifact{filtered.length !== 1 ? 's' : ''}</span>
+            <span style={{ marginLeft: 'auto', fontSize: '11px', color: 'rgba(255,255,255,0.2)' }}>{filtered.length} artifact{filtered.length !== 1 ? 's' : ''}</span>
           </div>
         )}
       </div>
