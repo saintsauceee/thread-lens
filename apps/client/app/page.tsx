@@ -120,8 +120,14 @@ function TopBar({
           onMouseEnter={e => { e.currentTarget.style.background = 'rgba(250,204,21,0.1)'; e.currentTarget.style.color = 'rgba(250,204,21,0.95)'; e.currentTarget.style.borderColor = 'rgba(250,204,21,0.45)'; e.currentTarget.style.boxShadow = '0 0 20px rgba(250,204,21,0.15)'; }}
           onMouseLeave={e => { e.currentTarget.style.background = 'rgba(250,204,21,0.04)'; e.currentTarget.style.color = 'rgba(250,204,21,0.7)'; e.currentTarget.style.borderColor = 'rgba(250,204,21,0.25)'; e.currentTarget.style.boxShadow = '0 0 12px rgba(250,204,21,0.08)'; }}
         >
-          <kbd style={{ fontSize: '10px', fontWeight: 700, background: 'rgba(250,204,21,0.1)', border: '1px solid rgba(250,204,21,0.15)', padding: '2px 6px', borderRadius: '5px', color: 'rgba(250,204,21,0.8)' }}>⌘K</kbd>
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" />
+          </svg>
           <span style={{ fontWeight: 500 }}>History</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+            <kbd style={{ fontSize: '10px', fontWeight: 700, background: 'rgba(250,204,21,0.1)', border: '1px solid rgba(250,204,21,0.15)', padding: '2px 6px', borderRadius: '5px', color: 'rgba(250,204,21,0.8)' }}>⌘</kbd>
+            <kbd style={{ fontSize: '10px', fontWeight: 700, background: 'rgba(250,204,21,0.1)', border: '1px solid rgba(250,204,21,0.15)', padding: '2px 6px', borderRadius: '5px', color: 'rgba(250,204,21,0.8)' }}>K</kbd>
+          </div>
         </button>
       </div>
     </nav>
