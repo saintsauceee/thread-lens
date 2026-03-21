@@ -198,13 +198,6 @@ function LandingView({
             }}>47 comments deep</span>
             <span style={{ color: 'rgba(250,204,21,0.6)' }}>.</span>
           </h1>
-          <p style={{
-            position: 'relative',
-            fontSize: '16px', color: 'rgba(255,255,255,0.25)',
-            marginTop: '20px', letterSpacing: '-0.01em', fontWeight: 400, lineHeight: 1.6,
-          }}>
-            Our agents will find it.
-          </p>
         </div>
 
         {/* Search */}
