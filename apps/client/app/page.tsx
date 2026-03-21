@@ -579,7 +579,12 @@ export default function Home() {
     setAgents([]);
     setArtifact(null);
     setOrchestratorPhase('thinking');
-    setAppPhase('clarifying');
+    if (fastMode) {
+      setClarifications([]);
+      setAppPhase('researching');
+    } else {
+      setAppPhase('clarifying');
+    }
   }
 
   function startResearch(answers: { question: string; answer: string }[]) {
