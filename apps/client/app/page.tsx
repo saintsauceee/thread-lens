@@ -89,14 +89,15 @@ function TopBar({
             style={{
               display: 'flex', alignItems: 'center', gap: '5px',
               padding: '7px 14px', borderRadius: '10px',
-              background: 'rgba(255,255,255,0.05)',
-              border: '1px solid rgba(255,255,255,0.07)',
-              color: 'rgba(255,255,255,0.4)',
-              cursor: 'pointer', transition: 'background 0.15s, color 0.15s',
-              fontSize: '12px', fontWeight: 500,
+              background: 'rgba(139,92,246,0.12)',
+              border: '1px solid rgba(167,139,250,0.4)',
+              color: 'rgba(216,201,255,0.9)',
+              cursor: 'pointer', transition: 'background 0.15s, color 0.15s, border-color 0.15s, box-shadow 0.15s',
+              fontSize: '12px', fontWeight: 600,
+              boxShadow: '0 0 12px rgba(139,92,246,0.08)',
             }}
-            onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.09)'; e.currentTarget.style.color = 'rgba(255,255,255,0.65)'; }}
-            onMouseLeave={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.05)'; e.currentTarget.style.color = 'rgba(255,255,255,0.4)'; }}
+            onMouseEnter={e => { e.currentTarget.style.background = 'rgba(139,92,246,0.15)'; e.currentTarget.style.color = 'rgba(196,181,253,1)'; e.currentTarget.style.borderColor = 'rgba(167,139,250,0.45)'; e.currentTarget.style.boxShadow = '0 0 20px rgba(139,92,246,0.15)'; }}
+            onMouseLeave={e => { e.currentTarget.style.background = 'rgba(139,92,246,0.08)'; e.currentTarget.style.color = 'rgba(196,181,253,0.85)'; e.currentTarget.style.borderColor = 'rgba(167,139,250,0.3)'; e.currentTarget.style.boxShadow = '0 0 12px rgba(139,92,246,0.08)'; }}
           >
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
               <path d="M12 5v14M5 12h14" />
