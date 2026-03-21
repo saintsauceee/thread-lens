@@ -118,7 +118,7 @@ export default function HistoryMenu({
           flexDirection: 'column',
           overflow: 'hidden',
           background: 'rgba(14,16,24,0.95)',
-          border: '1px solid rgba(255,255,255,0.1)',
+          border: '1px solid rgba(255,255,255,0.14)',
           borderRadius: '20px',
           boxShadow: '0 32px 80px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.04), inset 0 1px 0 rgba(255,255,255,0.07)',
           transform: visible ? 'translateY(0) scale(1)' : 'translateY(-12px) scale(0.97)',

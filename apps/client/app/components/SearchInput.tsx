@@ -47,7 +47,7 @@ export default function SearchInput({ onSubmit, placeholder = 'Ask anything…' 
           backgroundImage: focused
             ? 'linear-gradient(90deg, rgba(99,102,241,0.6), rgba(139,92,246,0.35), rgba(59,130,246,0.35), rgba(99,102,241,0.6))'
             : 'none',
-          backgroundColor: focused ? 'transparent' : 'rgba(255,255,255,0.08)',
+          backgroundColor: focused ? 'transparent' : 'rgba(255,255,255,0.14)',
           backgroundSize: '300% 100%',
           animation: focused ? 'border-shimmer 3s linear infinite' : 'none',
           boxShadow: focused
