@@ -48,11 +48,12 @@ export default function HistoryMenu({
 
     fetch(`${API_BASE}/research/kbs`)
       .then((r) => r.json())
-      .then((data: { id: string; query: string; updated_at: string; artifact_preview: string }[]) => {
+      .then((data: { id: string; query: string; updated_at: string; artifact_preview: string; status?: string }[]) => {
         setEntries(data.map((d) => ({
           id: d.id,
           query: d.query,
           updatedAt: d.updated_at,
+          status: d.status as HistoryEntry['status'],
           preview: d.artifact_preview?.replace(/^#+\s*/gm, '').replace(/\*+/g, '').trim() ?? '',
         })));
       })
@@ -178,14 +179,17 @@ export default function HistoryMenu({
                   }}
                 >
                   <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: '3px' }}>
-                    <p style={{ fontSize: '13.5px', fontWeight: 600, lineHeight: 1.3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: isActiveRow ? 'rgba(165,168,255,0.95)' : 'rgba(255,255,255,0.8)' }}>
-                      {entry.query}
+                    <p style={{ fontSize: '13.5px', fontWeight: 600, lineHeight: 1.3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: isActiveRow ? 'rgba(165,168,255,0.95)' : 'rgba(255,255,255,0.8)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{entry.query}</span>
+                      {entry.status === 'cancelled' && (
+                        <span style={{ fontSize: '10px', fontWeight: 600, color: 'rgba(248,113,113,0.9)', background: 'rgba(239,68,68,0.12)', padding: '2px 8px', borderRadius: '20px', flexShrink: 0 }}>Cancelled</span>
+                      )}
                     </p>
                     {entry.preview && (
                       <p style={{ fontSize: '12px', color: 'rgba(255,255,255,0.28)', lineHeight: 1.5, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{entry.preview}</p>
                     )}
                   </div>
-                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '6px', flexShrink: 0, paddingTop: '2px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexShrink: 0, paddingTop: '2px' }}>
                     <span style={{ fontSize: '11px', color: 'rgba(255,255,255,0.25)', whiteSpace: 'nowrap' }}>{timeAgo(entry.updatedAt)}</span>
                     {isCurrent && (
                       <span style={{ fontSize: '10px', fontWeight: 700, color: 'rgba(129,140,248,0.9)', background: 'rgba(99,102,241,0.15)', border: '1px solid rgba(99,102,241,0.25)', padding: '2px 7px', borderRadius: '20px' }}>current</span>
