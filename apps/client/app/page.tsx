@@ -7,7 +7,6 @@ import SubAgentCard from './components/SubAgentCard';
 import ResearchArtifact from './components/ResearchArtifact';
 import FollowUpInput from './components/FollowUpInput';
 import HistoryMenu from './components/HistoryMenu';
-import ResearchSidebar from './components/ResearchSidebar';
 import ToastContainer from './components/Toast';
 import {
   AppPhase,
@@ -19,46 +18,196 @@ import {
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000';
 
-// ── Landing ───────────────────────────────────────────────────────────────────
+// ── Animated background ──────────────────────────────────────────────────────
+
+function BackgroundEffects() {
+  return (
+    <div style={{ position: 'fixed', inset: 0, zIndex: 0, overflow: 'hidden', pointerEvents: 'none' }}>
+      <div style={{
+        position: 'absolute', top: '-8%', left: '8%',
+        width: '650px', height: '650px', borderRadius: '50%',
+        background: 'radial-gradient(circle, rgba(99,102,241,0.12) 0%, transparent 70%)',
+        filter: 'blur(80px)',
+        animation: 'orb-drift-1 30s ease-in-out infinite',
+      }} />
+      <div style={{
+        position: 'absolute', bottom: '-12%', right: '3%',
+        width: '550px', height: '550px', borderRadius: '50%',
+        background: 'radial-gradient(circle, rgba(139,92,246,0.09) 0%, transparent 70%)',
+        filter: 'blur(80px)',
+        animation: 'orb-drift-2 25s ease-in-out infinite',
+      }} />
+      <div style={{
+        position: 'absolute', top: '45%', left: '55%',
+        width: '400px', height: '400px', borderRadius: '50%',
+        background: 'radial-gradient(circle, rgba(59,130,246,0.06) 0%, transparent 65%)',
+        filter: 'blur(80px)',
+        animation: 'orb-drift-3 35s ease-in-out infinite',
+      }} />
+      <div style={{
+        position: 'absolute', inset: 0,
+        backgroundImage: 'radial-gradient(circle, rgba(255,255,255,0.04) 1px, transparent 1px)',
+        backgroundSize: '28px 28px',
+      }} />
+    </div>
+  );
+}
+
+// ── Top bar ──────────────────────────────────────────────────────────────────
+
+function TopBar({
+  onOpenHistory,
+  onNew,
+  sticky,
+}: {
+  onOpenHistory: () => void;
+  onNew?: () => void;
+  sticky?: boolean;
+}) {
+  return (
+    <nav style={{
+      position: sticky ? 'sticky' : 'absolute',
+      top: 0, left: 0, right: 0,
+      padding: '14px 28px',
+      display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+      zIndex: 20,
+      ...(sticky ? {
+        background: 'rgba(7,8,14,0.7)',
+        backdropFilter: 'blur(20px)',
+        WebkitBackdropFilter: 'blur(20px)',
+        borderBottom: '1px solid rgba(255,255,255,0.06)',
+      } : {}),
+    }}>
+      {/* Left — spacer */}
+      <div />
+
+      {/* Right — actions */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+        {onNew && (
+          <button
+            onClick={onNew}
+            style={{
+              display: 'flex', alignItems: 'center', gap: '5px',
+              padding: '7px 14px', borderRadius: '10px',
+              background: 'rgba(139,92,246,0.12)',
+              border: '1px solid rgba(167,139,250,0.4)',
+              color: 'rgba(216,201,255,0.9)',
+              cursor: 'pointer', transition: 'background 0.15s, color 0.15s, border-color 0.15s, box-shadow 0.15s',
+              fontSize: '12px', fontWeight: 600,
+              boxShadow: '0 0 12px rgba(139,92,246,0.08)',
+            }}
+            onMouseEnter={e => { e.currentTarget.style.background = 'rgba(139,92,246,0.15)'; e.currentTarget.style.color = 'rgba(196,181,253,1)'; e.currentTarget.style.borderColor = 'rgba(167,139,250,0.45)'; e.currentTarget.style.boxShadow = '0 0 20px rgba(139,92,246,0.15)'; }}
+            onMouseLeave={e => { e.currentTarget.style.background = 'rgba(139,92,246,0.08)'; e.currentTarget.style.color = 'rgba(196,181,253,0.85)'; e.currentTarget.style.borderColor = 'rgba(167,139,250,0.3)'; e.currentTarget.style.boxShadow = '0 0 12px rgba(139,92,246,0.08)'; }}
+          >
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M12 5v14M5 12h14" />
+            </svg>
+            New
+          </button>
+        )}
+        <button
+          onClick={onOpenHistory}
+          style={{
+            display: 'flex', alignItems: 'center', gap: '7px',
+            padding: '7px 14px', borderRadius: '10px',
+            background: 'rgba(250,204,21,0.04)',
+            border: '1px solid rgba(250,204,21,0.25)',
+            color: 'rgba(250,204,21,0.7)',
+            cursor: 'pointer', transition: 'background 0.15s, color 0.15s, border-color 0.15s, box-shadow 0.15s',
+            fontSize: '12px',
+            boxShadow: '0 0 12px rgba(250,204,21,0.08)',
+          }}
+          onMouseEnter={e => { e.currentTarget.style.background = 'rgba(250,204,21,0.1)'; e.currentTarget.style.color = 'rgba(250,204,21,0.95)'; e.currentTarget.style.borderColor = 'rgba(250,204,21,0.45)'; e.currentTarget.style.boxShadow = '0 0 20px rgba(250,204,21,0.15)'; }}
+          onMouseLeave={e => { e.currentTarget.style.background = 'rgba(250,204,21,0.04)'; e.currentTarget.style.color = 'rgba(250,204,21,0.7)'; e.currentTarget.style.borderColor = 'rgba(250,204,21,0.25)'; e.currentTarget.style.boxShadow = '0 0 12px rgba(250,204,21,0.08)'; }}
+        >
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" />
+          </svg>
+          <span style={{ fontWeight: 500 }}>History</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+            <kbd style={{ fontSize: '10px', fontWeight: 700, background: 'rgba(250,204,21,0.1)', border: '1px solid rgba(250,204,21,0.15)', padding: '2px 6px', borderRadius: '5px', color: 'rgba(250,204,21,0.8)' }}>⌘</kbd>
+            <kbd style={{ fontSize: '10px', fontWeight: 700, background: 'rgba(250,204,21,0.1)', border: '1px solid rgba(250,204,21,0.15)', padding: '2px 6px', borderRadius: '5px', color: 'rgba(250,204,21,0.8)' }}>K</kbd>
+          </div>
+        </button>
+      </div>
+    </nav>
+  );
+}
+
+// ── Landing ──────────────────────────────────────────────────────────────────
 
 function LandingView({
   onSubmit,
-  onHistorySelect,
-  onNew,
-  currentKbId,
-  sidebarRefreshKey,
+  onOpenHistory,
 }: {
   onSubmit: (q: string, fast: boolean) => void;
-  onHistorySelect: (entry: HistoryEntry) => void;
-  onNew: () => void;
-  currentKbId: string | null;
-  sidebarRefreshKey: number;
+  onOpenHistory: () => void;
 }) {
+  const glowRef = useRef<HTMLDivElement>(null);
+
+  function handleMouseMove(e: React.MouseEvent) {
+    if (glowRef.current) {
+      glowRef.current.style.transform = `translate(${e.clientX - 300}px, ${e.clientY - 300}px)`;
+    }
+  }
+
   return (
-    <div className="min-h-screen flex bg-white">
-      <ResearchSidebar currentKbId={currentKbId} onSelect={onHistorySelect} onNew={onNew} refreshKey={sidebarRefreshKey} />
-      <div className="flex-1 flex flex-col items-center justify-center gap-8 px-6 bg-neutral-50">
-        <div className="relative">
-          <div
-            className="absolute -inset-10 rounded-full blur-3xl pointer-events-none"
-            style={{ background: 'radial-gradient(circle, rgba(99,102,241,0.22) 0%, transparent 70%)' }}
-          />
-          <div
-            className="relative w-[72px] h-[72px] rounded-[22px] bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center"
-            style={{ boxShadow: '0 0 48px rgba(99,102,241,0.45), 0 8px 32px rgba(0,0,0,0.3)' }}
-          >
-            <svg width="30" height="30" viewBox="0 0 24 24" fill="currentColor" className="text-white">
-              <path d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 00-2.456 2.456zM16.894 20.567L16.5 21.75l-.394-1.183a2.25 2.25 0 00-1.423-1.423L13.5 18.75l1.183-.394a2.25 2.25 0 001.423-1.423l.394-1.183.394 1.183a2.25 2.25 0 001.423 1.423l1.183.394-1.183.394a2.25 2.25 0 00-1.423 1.423z" />
-            </svg>
-          </div>
+    <div
+      style={{ minHeight: '100vh', position: 'relative', display: 'flex', flexDirection: 'column', zIndex: 1 }}
+      onMouseMove={handleMouseMove}
+    >
+      {/* Mouse-reactive ambient glow */}
+      <div
+        ref={glowRef}
+        style={{
+          position: 'fixed', top: 0, left: 0,
+          width: '600px', height: '600px', borderRadius: '50%',
+          background: 'radial-gradient(circle, rgba(99,102,241,0.08) 0%, transparent 70%)',
+          filter: 'blur(60px)',
+          pointerEvents: 'none', zIndex: 0,
+          willChange: 'transform',
+        }}
+      />
+
+      <TopBar onOpenHistory={onOpenHistory} />
+
+      {/* Hero */}
+      <div style={{
+        flex: 1,
+        display: 'flex', flexDirection: 'column',
+        alignItems: 'center', justifyContent: 'center',
+        gap: '48px', padding: '0 24px',
+      }}>
+        {/* Title + subtitle */}
+        <div style={{ textAlign: 'center', position: 'relative' }}>
+          {/* Glow behind title */}
+          <div style={{
+            position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -55%)',
+            width: '500px', height: '140px', borderRadius: '50%',
+            background: 'radial-gradient(ellipse, rgba(139,92,246,0.18) 0%, rgba(99,102,241,0.06) 50%, transparent 75%)',
+            filter: 'blur(40px)', pointerEvents: 'none',
+            animation: 'glow-pulse 5s ease-in-out infinite',
+          }} />
+          <h1 style={{
+            position: 'relative',
+            fontSize: '52px', fontWeight: 800, letterSpacing: '-0.04em', lineHeight: 1.1,
+            color: 'rgba(255,255,255,0.88)',
+            margin: 0,
+          }}>
+            The best answer is<br />
+            <span style={{
+              backgroundImage: 'linear-gradient(90deg, #a5b4fc, #c084fc, #818cf8, #a5b4fc)',
+              backgroundSize: '200% 100%',
+              WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
+              backgroundClip: 'text',
+              animation: 'shimmer 6s linear infinite',
+            }}>47 comments deep</span>
+            <span style={{ color: 'rgba(250,204,21,0.6)' }}>.</span>
+          </h1>
         </div>
-        <h1
-          className="text-[28px] font-semibold tracking-tight bg-clip-text text-transparent"
-          style={{ backgroundImage: 'linear-gradient(135deg, #4338ca 0%, #1e1b4b 45%, #6d28d9 100%)' }}
-        >
-          What do you want?
-        </h1>
-        <div className="w-full" style={{ maxWidth: '720px' }}>
+
+        {/* Search */}
+        <div style={{ width: '100%', maxWidth: '640px' }}>
           <SearchInput onSubmit={onSubmit} />
         </div>
       </div>
@@ -66,38 +215,40 @@ function LandingView({
   );
 }
 
+// ── Agent layout ─────────────────────────────────────────────────────────────
+
 function AgentGrid({ agents, cancelled }: { agents: SubAgent[]; cancelled?: boolean }) {
   const round1 = agents.filter((a) => a.round === 1);
   const round2 = agents.filter((a) => a.round === 2);
   return (
     <>
       {round1.length > 0 && (
-        <div className="flex gap-3 mb-4">
-          <div className="flex flex-col gap-3 flex-1">
+        <div style={{ display: 'flex', gap: '10px', marginBottom: '12px' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', flex: 1 }}>
             {round1.filter((_, i) => i % 2 === 0).map((a) => <SubAgentCard key={`${a.id}-${a.dimmed}`} agent={a} cancelled={cancelled} />)}
           </div>
-          <div className="flex flex-col gap-3 flex-1">
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', flex: 1 }}>
             {round1.filter((_, i) => i % 2 !== 0).map((a) => <SubAgentCard key={`${a.id}-${a.dimmed}`} agent={a} cancelled={cancelled} />)}
           </div>
         </div>
       )}
       {round2.length > 0 && (
         <>
-          <div className="flex items-center gap-3 my-6">
-            <div className="flex-1 h-px bg-neutral-200" />
-            <span className="flex items-center gap-1.5 text-[11px] font-semibold text-neutral-500 uppercase tracking-widest shrink-0">
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', margin: '24px 0' }}>
+            <div style={{ flex: 1, height: '1px', background: 'rgba(255,255,255,0.07)' }} />
+            <span style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '10.5px', fontWeight: 700, color: 'rgba(255,255,255,0.3)', textTransform: 'uppercase' as const, letterSpacing: '0.1em', flexShrink: 0 }}>
               <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                 <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35M11 8v6M8 11h6"/>
               </svg>
               Expanded research
             </span>
-            <div className="flex-1 h-px bg-neutral-200" />
+            <div style={{ flex: 1, height: '1px', background: 'rgba(255,255,255,0.07)' }} />
           </div>
-          <div className="flex gap-3 mb-4">
-            <div className="flex flex-col gap-3 flex-1">
+          <div style={{ display: 'flex', gap: '10px', marginBottom: '12px' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', flex: 1 }}>
               {round2.filter((_, i) => i % 2 === 0).map((a) => <SubAgentCard key={`${a.id}-${a.dimmed}`} agent={a} cancelled={cancelled} />)}
             </div>
-            <div className="flex flex-col gap-3 flex-1">
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', flex: 1 }}>
               {round2.filter((_, i) => i % 2 !== 0).map((a) => <SubAgentCard key={`${a.id}-${a.dimmed}`} agent={a} cancelled={cancelled} />)}
             </div>
           </div>
@@ -113,47 +264,48 @@ function AgentsSection({ agents, previousAgents, cancelled, isComplete }: { agen
   const doneCount = agents.filter((a) => a.status === 'done').length;
 
   return (
-    <div className="mb-4">
+    <div style={{ marginBottom: '16px' }}>
       <button
         onClick={() => setUserExpanded(!expanded)}
-        className="w-full flex items-center gap-3 mb-3 group"
+        style={{ width: '100%', display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '12px', background: 'transparent', cursor: 'pointer', border: 'none' }}
       >
-        <div className="flex-1 h-px bg-neutral-200" />
-        <span className="flex items-center gap-1.5 text-[11px] font-semibold text-neutral-400 uppercase tracking-widest shrink-0 group-hover:text-neutral-600 transition-colors">
+        <div style={{ flex: 1, height: '1px', background: 'rgba(255,255,255,0.07)' }} />
+        <span
+          style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '10.5px', fontWeight: 700, color: 'rgba(255,255,255,0.28)', textTransform: 'uppercase' as const, letterSpacing: '0.1em', flexShrink: 0, transition: 'color 0.15s' }}
+          onMouseEnter={(e) => { e.currentTarget.style.color = 'rgba(255,255,255,0.5)'; }}
+          onMouseLeave={(e) => { e.currentTarget.style.color = 'rgba(255,255,255,0.28)'; }}
+        >
           {doneCount === agents.length && agents.length > 0 ? `${agents.length} agents done` : `${doneCount}/${agents.length} agents`}
           <svg
-            width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"
+            width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"
             strokeLinecap="round" strokeLinejoin="round"
-            className="transition-transform duration-300"
-            style={{ transform: expanded ? 'rotate(0deg)' : 'rotate(-90deg)' }}
+            style={{ transition: 'transform 0.3s', transform: expanded ? 'rotate(0deg)' : 'rotate(-90deg)' }}
           >
             <path d="M6 9l6 6 6-6" />
           </svg>
         </span>
-        <div className="flex-1 h-px bg-neutral-200" />
+        <div style={{ flex: 1, height: '1px', background: 'rgba(255,255,255,0.07)' }} />
       </button>
 
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateRows: expanded ? '1fr' : '0fr',
-          opacity: expanded ? 1 : 0,
-          transition: 'grid-template-rows 0.35s ease, opacity 0.25s ease',
-        }}
-      >
+      <div style={{
+        display: 'grid',
+        gridTemplateRows: expanded ? '1fr' : '0fr',
+        opacity: expanded ? 1 : 0,
+        transition: 'grid-template-rows 0.35s ease, opacity 0.25s ease',
+      }}>
         <div style={{ minHeight: 0, overflow: 'hidden' }}>
           {previousAgents.length > 0 && (
             <>
               <AgentGrid agents={previousAgents} />
-              <div className="flex items-center gap-3 my-6">
-                <div className="flex-1 h-px bg-violet-200" />
-                <span className="flex items-center gap-1.5 text-[11px] font-semibold text-violet-500 uppercase tracking-widest shrink-0">
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', margin: '24px 0' }}>
+                <div style={{ flex: 1, height: '1px', background: 'rgba(139,92,246,0.2)' }} />
+                <span style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '10.5px', fontWeight: 700, color: 'rgba(192,132,252,0.6)', textTransform: 'uppercase' as const, letterSpacing: '0.1em', flexShrink: 0 }}>
                   <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                     <path d="M3 12h18M3 6h18M3 18h18" />
                   </svg>
                   Refocused
                 </span>
-                <div className="flex-1 h-px bg-violet-200" />
+                <div style={{ flex: 1, height: '1px', background: 'rgba(139,92,246,0.2)' }} />
               </div>
             </>
           )}
@@ -164,6 +316,8 @@ function AgentsSection({ agents, previousAgents, cancelled, isComplete }: { agen
   );
 }
 
+// ── Research view ────────────────────────────────────────────────────────────
+
 function ResearchView({
   orchestratorPhase,
   agents,
@@ -172,13 +326,12 @@ function ResearchView({
   cancelled,
   query,
   kbId,
-  sidebarRefreshKey,
   activeStatus,
   onReset,
   onStop,
   onRefocus,
   onFollowUp,
-  onHistorySelect,
+  onOpenHistory,
 }: {
   orchestratorPhase: OrchestratorPhase;
   agents: SubAgent[];
@@ -187,84 +340,76 @@ function ResearchView({
   cancelled: boolean;
   query: string;
   kbId: string | null;
-  sidebarRefreshKey: number;
   activeStatus: 'running' | 'cancelled' | undefined;
   onReset: () => void;
   onStop: () => void;
   onRefocus: (instruction: string) => void;
   onFollowUp: (question: string) => void;
-  onHistorySelect: (entry: HistoryEntry) => void;
+  onOpenHistory: () => void;
 }) {
   const isResearching = activeStatus === 'running';
 
   return (
-    <div className="min-h-screen flex bg-white">
-      <ResearchSidebar
-        currentKbId={kbId}
-        onSelect={onHistorySelect}
-        onNew={onReset}
-        refreshKey={sidebarRefreshKey}
-        activeStatus={activeStatus}
-      />
+    <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', position: 'relative', zIndex: 1 }}>
+      <TopBar onOpenHistory={onOpenHistory} onNew={onReset} sticky />
 
-      <div className="flex-1 flex flex-col min-w-0 bg-neutral-50">
-        <div className="flex-1 max-w-3xl mx-auto w-full px-8 py-8">
-          <OrchestratorCard
-            phase={orchestratorPhase}
-            isResearching={isResearching}
-            cancelled={cancelled}
-            onStop={onStop}
-            onRefocus={onRefocus}
-          />
+      <div style={{ flex: 1, maxWidth: '880px', margin: '0 auto', width: '100%', padding: '28px 40px' }}>
+        <OrchestratorCard
+          phase={orchestratorPhase}
+          isResearching={isResearching}
+          cancelled={cancelled}
+          onStop={onStop}
+          onRefocus={onRefocus}
+        />
 
-          {(agents.length > 0 || previousAgents.length > 0) && (
-            <AgentsSection agents={agents} previousAgents={previousAgents} cancelled={cancelled} isComplete={!!artifact} />
-          )}
+        {(agents.length > 0 || previousAgents.length > 0) && (
+          <AgentsSection agents={agents} previousAgents={previousAgents} cancelled={cancelled} isComplete={!!artifact} />
+        )}
 
-          {artifact && <ResearchArtifact artifact={artifact} query={kbId ? query : undefined} kbId={kbId ?? undefined} />}
-          {artifact && !isResearching && <FollowUpInput onSubmit={onFollowUp} />}
-          {!artifact && !isResearching && (
-            <p className="text-[13px] text-neutral-400 mt-2">No report was generated.</p>
-          )}
-        </div>
+        {artifact && <ResearchArtifact artifact={artifact} query={kbId ? query : undefined} kbId={kbId ?? undefined} />}
+        {artifact && !isResearching && <FollowUpInput onSubmit={onFollowUp} />}
+        {!artifact && !isResearching && (
+          <p style={{ fontSize: '13px', color: 'rgba(255,255,255,0.25)', marginTop: '8px' }}>No report was generated.</p>
+        )}
       </div>
     </div>
   );
 }
+
+// ── Clarify view ─────────────────────────────────────────────────────────────
 
 function ClarifyView({
   query,
   fast,
   onStart,
   onSkip,
-  onHistorySelect,
   onNew,
-  currentKbId,
-  sidebarRefreshKey,
+  onOpenHistory,
 }: {
   query: string;
   fast: boolean;
   onStart: (answers: { question: string; answer: string }[]) => void;
   onSkip: () => void;
-  onHistorySelect: (entry: HistoryEntry) => void;
   onNew: () => void;
-  currentKbId: string | null;
-  sidebarRefreshKey: number;
+  onOpenHistory: () => void;
 }) {
   const [questions, setQuestions] = useState<string[]>([]);
   const [answers, setAnswers] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    let stale = false;
     fetch(`${API_BASE}/research/clarify?query=${encodeURIComponent(query)}&fast=${fast}`)
       .then((r) => r.json())
       .then((data) => {
+        if (stale) return;
         const qs: string[] = data.questions ?? [];
         setQuestions(qs);
         setAnswers(qs.map(() => ''));
       })
-      .catch(() => onSkip())
-      .finally(() => setLoading(false));
+      .catch(() => { if (!stale) onSkip(); })
+      .finally(() => { if (!stale) setLoading(false); });
+    return () => { stale = true; };
   }, []);
 
   function handleStart() {
@@ -273,77 +418,102 @@ function ClarifyView({
   }
 
   return (
-    <div className="min-h-screen flex bg-white">
-      <ResearchSidebar currentKbId={currentKbId} onSelect={onHistorySelect} onNew={onNew} refreshKey={sidebarRefreshKey} pendingQuery={query} />
-      <div className="flex-1 flex flex-col items-center justify-center gap-8 px-6 bg-neutral-50">
-      <div className="relative">
-        <div
-          className="absolute -inset-10 rounded-full blur-3xl pointer-events-none"
-          style={{ background: 'radial-gradient(circle, rgba(99,102,241,0.22) 0%, transparent 70%)' }}
-        />
-        <div
-          className="relative w-[72px] h-[72px] rounded-[22px] bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center"
-          style={{ boxShadow: '0 0 48px rgba(99,102,241,0.45), 0 8px 32px rgba(0,0,0,0.3)' }}
-        >
-          <svg width="30" height="30" viewBox="0 0 24 24" fill="currentColor" className="text-white">
-            <path d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 00-2.456 2.456zM16.894 20.567L16.5 21.75l-.394-1.183a2.25 2.25 0 00-1.423-1.423L13.5 18.75l1.183-.394a2.25 2.25 0 001.423-1.423l.394-1.183.394 1.183a2.25 2.25 0 001.423 1.423l1.183.394-1.183.394a2.25 2.25 0 00-1.423 1.423z" />
-          </svg>
-        </div>
-      </div>
+    <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', position: 'relative', zIndex: 1 }}>
+      <TopBar onOpenHistory={onOpenHistory} onNew={onNew} sticky />
 
-      <div className="w-full flex flex-col gap-6" style={{ maxWidth: '600px' }}>
-        <div>
-          <p className="text-[13px] text-neutral-500 font-medium mb-1">Your query</p>
-          <p className="text-[15px] text-neutral-800 font-semibold">{query}</p>
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '32px', padding: '0 24px' }}>
+        <div style={{ position: 'relative' }}>
+          <div style={{ position: 'absolute', inset: '-40px', borderRadius: '50%', background: 'radial-gradient(circle, rgba(99,102,241,0.15) 0%, transparent 70%)', pointerEvents: 'none' }} />
+          <div style={{ position: 'relative', width: '64px', height: '64px', borderRadius: '20px', background: 'linear-gradient(135deg, #6366f1, #8b5cf6)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 0 40px rgba(99,102,241,0.35), 0 8px 32px rgba(0,0,0,0.5)' }}>
+            <svg width="26" height="26" viewBox="0 0 24 24" fill="white">
+              <path d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 00-2.456 2.456z" />
+            </svg>
+          </div>
         </div>
 
-        {loading ? (
-          <div className="flex flex-col gap-4">
-            {[0, 1, 2].map((i) => (
-              <div key={i} className="flex flex-col gap-2 animate-pulse">
-                <div className="h-3.5 bg-neutral-200 rounded w-3/4" />
-                <div className="h-9 bg-neutral-100 rounded-lg" />
-              </div>
-            ))}
+        <div style={{ width: '100%', maxWidth: '560px', display: 'flex', flexDirection: 'column', gap: '24px' }}>
+          <div>
+            <p style={{ fontSize: '11px', fontWeight: 600, color: 'rgba(255,255,255,0.28)', textTransform: 'uppercase' as const, letterSpacing: '0.1em', marginBottom: '8px' }}>Your query</p>
+            <p style={{ fontSize: '16px', color: 'rgba(255,255,255,0.85)', fontWeight: 600, lineHeight: 1.4 }}>{query}</p>
           </div>
-        ) : (
-          <div className="flex flex-col gap-5">
-            {questions.map((q, i) => (
-              <div key={i} className="flex flex-col gap-1.5">
-                <label className="text-[13px] font-medium text-neutral-700">{q}</label>
-                <input
-                  type="text"
-                  value={answers[i]}
-                  onChange={(e) => setAnswers((prev) => prev.map((a, j) => (j === i ? e.target.value : a)))}
-                  placeholder="Your answer (optional)"
-                  className="px-3.5 py-2.5 text-[13px] rounded-lg border border-neutral-200 bg-neutral-50 focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-transparent transition-all text-neutral-800 placeholder:text-neutral-400"
-                />
-              </div>
-            ))}
-          </div>
-        )}
 
-        {!loading && (
-          <div className="flex gap-3 pt-1">
-            <button
-              onClick={handleStart}
-              className="flex-1 py-2.5 text-[13px] font-semibold bg-neutral-900 hover:bg-neutral-700 text-white rounded-lg transition-colors"
-            >
-              Start research
-            </button>
-            <button
-              onClick={onSkip}
-              className="px-5 py-2.5 text-[13px] font-medium text-neutral-500 hover:text-neutral-800 border border-neutral-200 hover:border-neutral-300 rounded-lg transition-colors"
-            >
-              Skip
-            </button>
-          </div>
-        )}
-      </div>
+          {loading ? (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              {[0, 1, 2].map((i) => (
+                <div key={i} style={{ display: 'flex', flexDirection: 'column', gap: '8px', opacity: 1 - i * 0.2 }}>
+                  <div style={{ height: '12px', background: 'rgba(255,255,255,0.06)', borderRadius: '6px', width: '60%', animation: 'pulse 2s infinite' }} />
+                  <div style={{ height: '40px', background: 'rgba(255,255,255,0.04)', borderRadius: '10px', animation: 'pulse 2s infinite', animationDelay: `${i * 200}ms` }} />
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+              {questions.map((q, i) => (
+                <div key={i} style={{ display: 'flex', flexDirection: 'column', gap: '7px' }}>
+                  <label style={{ fontSize: '13px', fontWeight: 500, color: 'rgba(255,255,255,0.6)' }}>{q}</label>
+                  <input
+                    type="text"
+                    value={answers[i]}
+                    onChange={(e) => setAnswers((prev) => prev.map((a, j) => (j === i ? e.target.value : a)))}
+                    placeholder="Your answer (optional)"
+                    style={{
+                      padding: '10px 14px', fontSize: '13px', borderRadius: '10px',
+                      border: '1px solid rgba(255,255,255,0.08)',
+                      background: 'rgba(255,255,255,0.04)',
+                      color: 'rgba(255,255,255,0.8)', outline: 'none',
+                      transition: 'border-color 0.15s, box-shadow 0.15s',
+                    }}
+                    className="placeholder:text-white/20 focus:border-indigo-500/40"
+                    onFocus={(e) => { e.currentTarget.style.boxShadow = '0 0 0 3px rgba(99,102,241,0.08)'; }}
+                    onBlur={(e) => { e.currentTarget.style.boxShadow = 'none'; }}
+                  />
+                </div>
+              ))}
+            </div>
+          )}
+
+          {!loading && (
+            <div style={{ display: 'flex', gap: '10px', paddingTop: '4px' }}>
+              <button
+                onClick={answers.some((a) => a.trim()) ? handleStart : onSkip}
+                style={{
+                  flex: 1, padding: '11px', fontSize: '13px', fontWeight: 700,
+                  background: answers.some((a) => a.trim())
+                    ? 'linear-gradient(135deg, #6366f1, #8b5cf6)'
+                    : 'rgba(255,255,255,0.05)',
+                  color: answers.some((a) => a.trim()) ? 'white' : 'rgba(255,255,255,0.4)',
+                  borderRadius: '10px', cursor: 'pointer',
+                  border: answers.some((a) => a.trim()) ? 'none' : '1px solid rgba(255,255,255,0.1)',
+                  transition: 'all 0.2s',
+                  boxShadow: answers.some((a) => a.trim()) ? '0 4px 20px rgba(99,102,241,0.35)' : 'none',
+                }}
+                onMouseEnter={(e) => { e.currentTarget.style.opacity = '0.88'; }}
+                onMouseLeave={(e) => { e.currentTarget.style.opacity = '1'; }}
+              >
+                {answers.some((a) => a.trim()) ? 'Start research' : 'Skip'}
+              </button>
+              <button
+                onClick={onNew}
+                style={{
+                  padding: '11px 20px', fontSize: '13px', fontWeight: 500,
+                  color: 'rgba(248,113,113,0.7)', background: 'rgba(239,68,68,0.06)',
+                  border: '1px solid rgba(239,68,68,0.2)', borderRadius: '10px',
+                  cursor: 'pointer', transition: 'color 0.15s, background 0.15s, border-color 0.15s',
+                }}
+                onMouseEnter={(e) => { e.currentTarget.style.color = 'rgba(248,113,113,0.95)'; e.currentTarget.style.background = 'rgba(239,68,68,0.12)'; e.currentTarget.style.borderColor = 'rgba(239,68,68,0.35)'; }}
+                onMouseLeave={(e) => { e.currentTarget.style.color = 'rgba(248,113,113,0.7)'; e.currentTarget.style.background = 'rgba(239,68,68,0.06)'; e.currentTarget.style.borderColor = 'rgba(239,68,68,0.2)'; }}
+              >
+                Cancel
+              </button>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
 }
+
+// ── Main ─────────────────────────────────────────────────────────────────────
 
 export default function Home() {
   const [appPhase, setAppPhase] = useState<AppPhase>('idle');
@@ -360,7 +530,6 @@ export default function Home() {
   const [followUp, setFollowUp] = useState<string | null>(null);
   const [refocusData, setRefocusData] = useState<{ sid: string; instruction: string } | null>(null);
   const [streamVersion, setStreamVersion] = useState(0);
-  const [sidebarRefreshKey, setSidebarRefreshKey] = useState(0);
   const [historyMenuOpen, setHistoryMenuOpen] = useState(false);
   const esRef = useRef<EventSource | null>(null);
 
@@ -416,7 +585,12 @@ export default function Home() {
     setAgents([]);
     setArtifact(null);
     setOrchestratorPhase('thinking');
-    setAppPhase('clarifying');
+    if (fastMode) {
+      setClarifications([]);
+      setAppPhase('researching');
+    } else {
+      setAppPhase('clarifying');
+    }
   }
 
   function startResearch(answers: { question: string; answer: string }[]) {
@@ -445,9 +619,7 @@ export default function Home() {
     esRef.current?.close();
     setCancelled(true);
     if (sessionId) {
-      fetch(`${API_BASE}/research/session/${sessionId}/cancel`, { method: 'POST' })
-        .then(() => setSidebarRefreshKey((k) => k + 1))
-        .catch(() => {});
+      fetch(`${API_BASE}/research/session/${sessionId}/cancel`, { method: 'POST' }).catch(() => {});
     }
   }
 
@@ -498,7 +670,6 @@ export default function Home() {
         case 'kb_id':
           setKbId(event.id);
           localStorage.setItem('thread_lens_kb', JSON.stringify({ id: event.id, query }));
-          setSidebarRefreshKey((k) => k + 1);
           break;
 
         case 'session_id':
@@ -568,7 +739,6 @@ export default function Home() {
           });
           setOrchestratorPhase('done');
           setAppPhase('complete');
-          setSidebarRefreshKey((k) => k + 1);
           break;
 
         case 'done':
@@ -582,11 +752,16 @@ export default function Home() {
     return () => es.close();
   }, [appPhase, streamVersion]);
 
+  // ── Render ──
+
+  const openHistory = () => setHistoryMenuOpen(true);
+
   if (appPhase === 'idle') {
     return (
       <>
+        <BackgroundEffects />
         <HistoryMenu open={historyMenuOpen} onClose={() => setHistoryMenuOpen(false)} onSelect={handleHistorySelect} currentKbId={kbId} />
-        <LandingView onSubmit={handleSubmit} onHistorySelect={handleHistorySelect} onNew={handleReset} currentKbId={kbId} sidebarRefreshKey={sidebarRefreshKey} />
+        <LandingView onSubmit={handleSubmit} onOpenHistory={openHistory} />
         <ToastContainer />
       </>
     );
@@ -595,16 +770,15 @@ export default function Home() {
   if (appPhase === 'clarifying') {
     return (
       <>
+        <BackgroundEffects />
         <HistoryMenu open={historyMenuOpen} onClose={() => setHistoryMenuOpen(false)} onSelect={handleHistorySelect} currentKbId={kbId} />
         <ClarifyView
           query={query}
           fast={fast}
           onStart={startResearch}
           onSkip={() => startResearch([])}
-          onHistorySelect={handleHistorySelect}
           onNew={handleReset}
-          currentKbId={kbId}
-          sidebarRefreshKey={sidebarRefreshKey}
+          onOpenHistory={openHistory}
         />
         <ToastContainer />
       </>
@@ -613,6 +787,7 @@ export default function Home() {
 
   return (
     <>
+      <BackgroundEffects />
       <HistoryMenu
         open={historyMenuOpen}
         onClose={() => setHistoryMenuOpen(false)}
@@ -627,13 +802,12 @@ export default function Home() {
         cancelled={cancelled}
         query={query}
         kbId={kbId}
-        sidebarRefreshKey={sidebarRefreshKey}
         activeStatus={cancelled ? 'cancelled' : appPhase === 'researching' ? 'running' : undefined}
         onReset={handleReset}
         onStop={handleStop}
         onRefocus={handleRefocus}
         onFollowUp={handleFollowUp}
-        onHistorySelect={handleHistorySelect}
+        onOpenHistory={openHistory}
       />
       <ToastContainer />
     </>

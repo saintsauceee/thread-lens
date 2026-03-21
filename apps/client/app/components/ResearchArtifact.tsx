@@ -29,58 +29,88 @@ export default function ResearchArtifact({
 
   return (
     <div
-      className="transition-all duration-700 ease-out"
-      style={{ opacity: visible ? 1 : 0, transform: visible ? 'translateY(0)' : 'translateY(12px)' }}
+      style={{
+        opacity: visible ? 1 : 0,
+        transform: visible ? 'translateY(0)' : 'translateY(12px)',
+        transition: 'opacity 0.7s ease, transform 0.7s ease',
+      }}
     >
       {(metaPills.length > 0 || (kbId && query)) && (
-        <div className="flex items-center gap-2 mb-5">
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px', flexWrap: 'wrap' }}>
           {metaPills.map((label) => (
-            <span key={label} className="text-[12px] font-medium text-neutral-500 bg-white border border-neutral-200 px-3 py-1 rounded-full shadow-sm">
+            <span
+              key={label}
+              style={{
+                fontSize: '12px',
+                fontWeight: 500,
+                color: 'rgba(255,255,255,0.45)',
+                background: 'rgba(255,255,255,0.05)',
+                border: '1px solid rgba(255,255,255,0.08)',
+                padding: '4px 12px',
+                borderRadius: '20px',
+              }}
+            >
               {label}
             </span>
           ))}
           {kbId && query && (
-            <div className="ml-auto">
+            <div style={{ marginLeft: 'auto' }}>
               <ExportButton kbId={kbId} query={query} />
             </div>
           )}
         </div>
       )}
 
-      <div className="bg-white border border-neutral-200 rounded-2xl shadow-sm overflow-hidden">
-        <div className="px-8 py-7 space-y-6" data-artifact-content>
+      <div
+        style={{
+          background: 'rgba(255,255,255,0.03)',
+          border: '1px solid rgba(255,255,255,0.08)',
+          borderRadius: '18px',
+          overflow: 'hidden',
+          boxShadow: '0 4px 40px rgba(0,0,0,0.3)',
+        }}
+      >
+        <div style={{ padding: '32px 36px' }} data-artifact-content>
           <ReactMarkdown
             remarkPlugins={[remarkGfm]}
             components={{
               h1: ({ children }) => (
-                <h1 className="text-lg font-semibold text-neutral-900 tracking-tight mb-1">{children}</h1>
+                <h1 style={{ fontSize: '18px', fontWeight: 700, color: 'rgba(255,255,255,0.92)', letterSpacing: '-0.02em', marginBottom: '6px', lineHeight: 1.3 }}>{children}</h1>
               ),
               h2: ({ children }) => (
-                <h2 className="text-[11px] font-semibold uppercase tracking-widest text-neutral-400 mt-8 mb-3 first:mt-0">{children}</h2>
+                <h2 style={{ fontSize: '10.5px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.12em', color: 'rgba(255,255,255,0.28)', marginTop: '36px', marginBottom: '14px' }}>
+                  {children}
+                </h2>
               ),
               h3: ({ children }) => (
-                <h3 className="text-[13px] font-semibold text-neutral-700 mt-5 mb-2">{children}</h3>
+                <h3 style={{ fontSize: '13.5px', fontWeight: 600, color: 'rgba(255,255,255,0.75)', marginTop: '24px', marginBottom: '8px' }}>{children}</h3>
               ),
               p: ({ children }) => (
-                <p className="text-sm text-neutral-600 leading-relaxed">{children}</p>
+                <p style={{ fontSize: '14px', color: 'rgba(255,255,255,0.58)', lineHeight: 1.75, marginBottom: '12px' }}>{children}</p>
               ),
               ul: ({ children }) => (
-                <ul className="space-y-1.5 my-3">{children}</ul>
+                <ul style={{ margin: '10px 0 14px', display: 'flex', flexDirection: 'column', gap: '8px' }}>{children}</ul>
               ),
               li: ({ children }) => (
-                <li className="flex gap-2 text-sm text-neutral-600 leading-relaxed">
-                  <span className="mt-[7px] w-1 h-1 rounded-full bg-neutral-300 shrink-0" />
+                <li style={{ display: 'flex', gap: '10px', fontSize: '14px', color: 'rgba(255,255,255,0.58)', lineHeight: 1.65 }}>
+                  <span style={{ marginTop: '9px', width: '4px', height: '4px', borderRadius: '50%', background: 'rgba(99,102,241,0.6)', flexShrink: 0 }} />
                   <span>{children}</span>
                 </li>
               ),
               strong: ({ children }) => (
-                <strong className="font-semibold text-neutral-800">{children}</strong>
+                <strong style={{ fontWeight: 600, color: 'rgba(255,255,255,0.78)' }}>{children}</strong>
               ),
               a: ({ href, children }) => (
-                <a href={href} className="text-indigo-500 hover:underline" target="_blank" rel="noopener noreferrer">{children}</a>
+                <a href={href} style={{ color: 'rgba(129,140,248,0.9)', textDecoration: 'none' }} target="_blank" rel="noopener noreferrer"
+                  onMouseEnter={(e) => { (e.target as HTMLElement).style.textDecoration = 'underline'; }}
+                  onMouseLeave={(e) => { (e.target as HTMLElement).style.textDecoration = 'none'; }}
+                >{children}</a>
               ),
               hr: () => (
-                <hr className="border-neutral-100 my-6" />
+                <hr style={{ border: 'none', borderTop: '1px solid rgba(255,255,255,0.06)', margin: '28px 0' }} />
+              ),
+              code: ({ children }) => (
+                <code style={{ fontSize: '12.5px', color: 'rgba(192,132,252,0.9)', background: 'rgba(139,92,246,0.1)', padding: '2px 6px', borderRadius: '5px', fontFamily: 'monospace' }}>{children}</code>
               ),
             }}
           >

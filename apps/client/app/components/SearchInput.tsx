@@ -10,6 +10,7 @@ interface Props {
 export default function SearchInput({ onSubmit, placeholder = 'Ask anything…' }: Props) {
   const [value, setValue] = useState('');
   const [fast, setFast] = useState(false);
+  const [focused, setFocused] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const handleSubmit = () => {
@@ -34,58 +35,151 @@ export default function SearchInput({ onSubmit, placeholder = 'Ask anything…' 
     ta.style.height = `${Math.min(ta.scrollHeight, 200)}px`;
   };
 
+  const canSubmit = !!value.trim();
+
   return (
     <div>
+      {/* Animated gradient border wrapper */}
       <div
-        className="flex items-center gap-2 bg-white border border-neutral-200 rounded-l-2xl rounded-r-xl px-4 shadow-sm focus-within:border-neutral-300 transition-colors"
-        style={{ minHeight: '52px' }}
+        style={{
+          borderRadius: '20px',
+          padding: '1px',
+          backgroundImage: focused
+            ? 'linear-gradient(90deg, rgba(99,102,241,0.6), rgba(139,92,246,0.35), rgba(59,130,246,0.35), rgba(99,102,241,0.6))'
+            : 'none',
+          backgroundColor: focused ? 'transparent' : 'rgba(255,255,255,0.14)',
+          backgroundSize: '300% 100%',
+          animation: focused ? 'border-shimmer 3s linear infinite' : 'none',
+          boxShadow: focused
+            ? '0 0 32px rgba(99,102,241,0.12), 0 4px 40px rgba(0,0,0,0.3)'
+            : '0 2px 20px rgba(0,0,0,0.3)',
+          transition: 'box-shadow 0.3s ease',
+        }}
       >
-        <textarea
-          ref={textareaRef}
-          value={value}
-          onChange={handleChange}
-          onKeyDown={handleKeyDown}
-          placeholder={placeholder}
-          rows={1}
-          className="flex-1 bg-transparent text-sm text-neutral-900 placeholder-neutral-400 resize-none outline-none leading-relaxed py-3"
-          style={{ maxHeight: '200px' }}
-        />
-        <button
-          type="button"
-          onClick={() => setFast((f) => !f)}
-          className="shrink-0 flex items-center gap-1.5 group"
-          title="Fast mode: uses a lighter model"
+        <div
+          style={{
+            borderRadius: '19px',
+            background: 'rgba(7,8,14,0.97)',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '10px',
+            padding: '0 16px',
+            minHeight: '58px',
+          }}
         >
-          <span className={`flex items-center gap-1 text-[11px] font-medium transition-colors ${fast ? 'text-yellow-500' : 'text-neutral-400'}`}>
-            <svg width="9" height="9" viewBox="0 0 24 24" fill="currentColor">
-              <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" />
-            </svg>
-            Fast
-          </span>
-          <span
-            className={`relative inline-flex h-5 w-9 shrink-0 rounded-full transition-colors duration-200 ${
-              fast ? 'bg-yellow-400' : 'bg-neutral-200'
-            }`}
+          <textarea
+            ref={textareaRef}
+            value={value}
+            onChange={handleChange}
+            onKeyDown={handleKeyDown}
+            onFocus={() => setFocused(true)}
+            onBlur={() => setFocused(false)}
+            placeholder={placeholder}
+            rows={1}
+            style={{
+              flex: 1,
+              background: 'transparent',
+              color: '#dde3f5',
+              fontSize: '14px',
+              lineHeight: '1.6',
+              resize: 'none',
+              outline: 'none',
+              maxHeight: '200px',
+              padding: '16px 0',
+            }}
+            className="placeholder:text-white/20"
+          />
+
+          <button
+            type="button"
+            onClick={() => setFast((f) => !f)}
+            title="Fast mode: uses a lighter model"
+            className="shrink-0 flex items-center gap-1.5"
           >
             <span
-              className={`inline-block h-4 w-4 rounded-full bg-white shadow-sm transition-transform duration-200 mt-0.5 ${
-                fast ? 'translate-x-4' : 'translate-x-0.5'
-              }`}
-            />
-          </span>
-        </button>
-        <div className="w-px h-4 bg-neutral-200 shrink-0" />
-        <button
-          onClick={handleSubmit}
-          disabled={!value.trim()}
-          className="shrink-0 w-7 h-7 rounded-lg bg-indigo-600 hover:bg-indigo-500 disabled:bg-neutral-200 disabled:cursor-not-allowed flex items-center justify-center transition-colors"
-        >
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="text-white">
-            <path d="M12 19V5M5 12l7-7 7 7" />
-          </svg>
-        </button>
+              style={{
+                fontSize: '11px',
+                fontWeight: 500,
+                color: fast ? '#facc15' : 'rgba(255,255,255,0.28)',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '4px',
+                transition: 'color 0.2s',
+              }}
+            >
+              <svg width="9" height="9" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" />
+              </svg>
+              Fast
+            </span>
+            <span
+              style={{
+                position: 'relative',
+                display: 'inline-flex',
+                height: '18px',
+                width: '32px',
+                borderRadius: '9px',
+                background: fast ? 'rgba(234,179,8,0.8)' : 'rgba(255,255,255,0.1)',
+                transition: 'background 0.2s',
+                flexShrink: 0,
+              }}
+            >
+              <span
+                style={{
+                  position: 'absolute',
+                  top: '2px',
+                  left: fast ? '14px' : '2px',
+                  width: '14px',
+                  height: '14px',
+                  borderRadius: '50%',
+                  background: 'white',
+                  boxShadow: '0 1px 3px rgba(0,0,0,0.4)',
+                  transition: 'left 0.2s',
+                }}
+              />
+            </span>
+          </button>
+
+          <div style={{ width: '1px', height: '16px', background: 'rgba(255,255,255,0.07)', flexShrink: 0 }} />
+
+          <button
+            onClick={handleSubmit}
+            disabled={!canSubmit}
+            style={{
+              flexShrink: 0,
+              width: '32px',
+              height: '32px',
+              borderRadius: '10px',
+              background: canSubmit
+                ? 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)'
+                : 'rgba(255,255,255,0.05)',
+              border: canSubmit ? 'none' : '1px solid rgba(255,255,255,0.06)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              cursor: canSubmit ? 'pointer' : 'not-allowed',
+              transition: 'background 0.2s, box-shadow 0.2s',
+              boxShadow: canSubmit ? '0 2px 16px rgba(99,102,241,0.45)' : 'none',
+            }}
+          >
+            <svg
+              width="13"
+              height="13"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="white"
+              strokeWidth="2.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              style={{ opacity: canSubmit ? 1 : 0.25 }}
+            >
+              <path d="M12 19V5M5 12l7-7 7 7" />
+            </svg>
+          </button>
+        </div>
       </div>
-      <p className="text-center text-[11px] text-neutral-400 mt-2">
+
+      <p style={{ textAlign: 'center', fontSize: '11px', color: 'rgba(255,255,255,0.18)', marginTop: '10px' }}>
         Enter to send · Shift+Enter for new line
       </p>
     </div>

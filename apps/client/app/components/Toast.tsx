@@ -32,8 +32,18 @@ export default function ToastContainer() {
       {toasts.map((t) => (
         <div
           key={t.id}
-          className="text-[12px] font-medium text-red-600 bg-red-50 border border-red-200 rounded-lg px-3.5 py-2 shadow-md"
-          style={{ animation: 'fadeInUp 0.2s ease' }}
+          style={{
+            fontSize: '12px',
+            fontWeight: 500,
+            color: 'rgba(255,255,255,0.85)',
+            background: 'rgba(20,22,32,0.95)',
+            border: '1px solid rgba(255,255,255,0.1)',
+            borderRadius: '10px',
+            padding: '8px 14px',
+            boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
+            animation: 'fadeInUp 0.2s ease',
+            backdropFilter: 'blur(12px)',
+          }}
         >
           {t.text}
         </div>
