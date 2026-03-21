@@ -398,15 +398,18 @@ function ClarifyView({
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    let stale = false;
     fetch(`${API_BASE}/research/clarify?query=${encodeURIComponent(query)}&fast=${fast}`)
       .then((r) => r.json())
       .then((data) => {
+        if (stale) return;
         const qs: string[] = data.questions ?? [];
         setQuestions(qs);
         setAnswers(qs.map(() => ''));
       })
-      .catch(() => onSkip())
-      .finally(() => setLoading(false));
+      .catch(() => { if (!stale) onSkip(); })
+      .finally(() => { if (!stale) setLoading(false); });
+    return () => { stale = true; };
   }, []);
 
   function handleStart() {
@@ -472,30 +475,35 @@ function ClarifyView({
           {!loading && (
             <div style={{ display: 'flex', gap: '10px', paddingTop: '4px' }}>
               <button
-                onClick={handleStart}
+                onClick={answers.some((a) => a.trim()) ? handleStart : onSkip}
                 style={{
                   flex: 1, padding: '11px', fontSize: '13px', fontWeight: 700,
-                  background: 'linear-gradient(135deg, #6366f1, #8b5cf6)',
-                  color: 'white', borderRadius: '10px', cursor: 'pointer', border: 'none',
-                  transition: 'opacity 0.15s', boxShadow: '0 4px 20px rgba(99,102,241,0.35)',
+                  background: answers.some((a) => a.trim())
+                    ? 'linear-gradient(135deg, #6366f1, #8b5cf6)'
+                    : 'rgba(255,255,255,0.05)',
+                  color: answers.some((a) => a.trim()) ? 'white' : 'rgba(255,255,255,0.4)',
+                  borderRadius: '10px', cursor: 'pointer',
+                  border: answers.some((a) => a.trim()) ? 'none' : '1px solid rgba(255,255,255,0.1)',
+                  transition: 'all 0.2s',
+                  boxShadow: answers.some((a) => a.trim()) ? '0 4px 20px rgba(99,102,241,0.35)' : 'none',
                 }}
                 onMouseEnter={(e) => { e.currentTarget.style.opacity = '0.88'; }}
                 onMouseLeave={(e) => { e.currentTarget.style.opacity = '1'; }}
               >
-                Start research
+                {answers.some((a) => a.trim()) ? 'Start research' : 'Skip'}
               </button>
               <button
-                onClick={onSkip}
+                onClick={onNew}
                 style={{
                   padding: '11px 20px', fontSize: '13px', fontWeight: 500,
-                  color: 'rgba(255,255,255,0.4)', background: 'rgba(255,255,255,0.05)',
-                  border: '1px solid rgba(255,255,255,0.08)', borderRadius: '10px',
-                  cursor: 'pointer', transition: 'color 0.15s, background 0.15s',
+                  color: 'rgba(248,113,113,0.7)', background: 'rgba(239,68,68,0.06)',
+                  border: '1px solid rgba(239,68,68,0.2)', borderRadius: '10px',
+                  cursor: 'pointer', transition: 'color 0.15s, background 0.15s, border-color 0.15s',
                 }}
-                onMouseEnter={(e) => { e.currentTarget.style.color = 'rgba(255,255,255,0.7)'; e.currentTarget.style.background = 'rgba(255,255,255,0.08)'; }}
-                onMouseLeave={(e) => { e.currentTarget.style.color = 'rgba(255,255,255,0.4)'; e.currentTarget.style.background = 'rgba(255,255,255,0.05)'; }}
+                onMouseEnter={(e) => { e.currentTarget.style.color = 'rgba(248,113,113,0.95)'; e.currentTarget.style.background = 'rgba(239,68,68,0.12)'; e.currentTarget.style.borderColor = 'rgba(239,68,68,0.35)'; }}
+                onMouseLeave={(e) => { e.currentTarget.style.color = 'rgba(248,113,113,0.7)'; e.currentTarget.style.background = 'rgba(239,68,68,0.06)'; e.currentTarget.style.borderColor = 'rgba(239,68,68,0.2)'; }}
               >
-                Skip
+                Cancel
               </button>
             </div>
           )}
