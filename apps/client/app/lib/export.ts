@@ -74,6 +74,7 @@ export function exportPDF(): void {
   const style = document.createElement('style');
   style.textContent = `
     @media print {
+      body.__pdf-printing { background: white !important; }
       body.__pdf-printing > *:not(.__pdf-ancestor):not(.__pdf-target) { display: none !important; }
       .__pdf-ancestor {
         display: block !important;
@@ -86,7 +87,23 @@ export function exportPDF(): void {
         margin: 0 !important;
       }
       .__pdf-ancestor > *:not(.__pdf-ancestor):not(.__pdf-target) { display: none !important; }
-      .__pdf-target { display: block !important; }
+      .__pdf-target {
+        display: block !important;
+        background: white !important;
+        border: none !important;
+        box-shadow: none !important;
+        padding: 24px !important;
+      }
+      .__pdf-target h1 { color: #111 !important; }
+      .__pdf-target h2 { color: #444 !important; }
+      .__pdf-target h3 { color: #222 !important; }
+      .__pdf-target p { color: #333 !important; }
+      .__pdf-target li { color: #333 !important; }
+      .__pdf-target strong { color: #111 !important; }
+      .__pdf-target a { color: #4f46e5 !important; }
+      .__pdf-target code { color: #7c3aed !important; background: #f3f0ff !important; }
+      .__pdf-target hr { border-top-color: #e5e7eb !important; }
+      .__pdf-target li span:first-child { background: #4f46e5 !important; }
     }
   `;
   document.head.appendChild(style);
