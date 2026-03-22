@@ -112,6 +112,20 @@ export default function ResearchArtifact({
               code: ({ children }) => (
                 <code style={{ fontSize: '12.5px', color: 'rgba(192,132,252,0.9)', background: 'rgba(139,92,246,0.1)', padding: '2px 6px', borderRadius: '5px', fontFamily: 'monospace' }}>{children}</code>
               ),
+              table: ({ children }) => (
+                <div style={{ overflowX: 'auto', margin: '28px 0', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.06)', background: 'rgba(255,255,255,0.02)' }}>
+                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>{children}</table>
+                </div>
+              ),
+              thead: ({ children }) => (
+                <thead style={{ borderBottom: '1px solid rgba(255,255,255,0.08)' }}>{children}</thead>
+              ),
+              th: ({ children }) => (
+                <th style={{ padding: '12px 16px', textAlign: 'left', fontWeight: 500, color: 'rgba(255,255,255,0.4)', fontSize: '11.5px', textTransform: 'uppercase', letterSpacing: '0.06em' }}>{children}</th>
+              ),
+              td: ({ children }) => (
+                <td style={{ padding: '14px 16px', color: 'rgba(255,255,255,0.5)', borderTop: '1px solid rgba(255,255,255,0.04)', lineHeight: 1.55 }}>{children}</td>
+              ),
             }}
           >
             {artifact.rawMarkdown}
