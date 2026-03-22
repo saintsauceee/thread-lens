@@ -315,6 +315,8 @@ async def stream_research(
                         yield emit({"type": "done"})
             except GeneratorExit:
                 pass
+            except Exception as exc:
+                yield emit({"type": "error", "message": str(exc)})
             finally:
                 _running_tasks.pop(new_session_id, None)
                 if not session_completed:
