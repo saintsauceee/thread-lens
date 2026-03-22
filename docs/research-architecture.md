@@ -102,9 +102,23 @@ The graph state is a `TypedDict` that flows through every node:
 
 ---
 
+## Models
+
+All LLM calls use Google Gemini. The model depends on whether fast mode is enabled:
+
+| Component | Default | Fast mode |
+|---|---|---|
+| Orchestrator | `gemini-2.5-flash` | `gemini-3.1-flash-lite-preview` |
+| Subagent | `gemini-2.5-flash` | `gemini-3.1-flash-lite-preview` |
+| Synthesizer | `gemini-2.5-flash` | `gemini-3.1-flash-lite-preview` |
+
+Fast mode skips the clarification phase and uses cheaper models throughout.
+
+---
+
 ## Key rotation
 
-Subagents use Google Gemini models. To work around free-tier rate limits, the app rotates across up to 5 API keys (`GOOGLE_API_KEY_1` through `GOOGLE_API_KEY_5`).
+Subagents use Google Gemini models. To work around free-tier rate limits, the app rotates across up to 5 API keys (`GOOGLE_API_KEY_1` through `GOOGLE_API_KEY_5`). If none are set, it falls back to a single `GOOGLE_API_KEY`.
 
 The `KeyRotator` tracks per-key usage:
 - **RPM limit:** 4 requests/minute

@@ -5,7 +5,7 @@ The `/research/stream` endpoint streams research progress as [Server-Sent Events
 ## Connecting
 
 ```
-GET /research/stream?query=...&clarifications=...&kb_id=...
+GET /research/stream?query=...&fast=false&clarifications=...&kb_id=...
 ```
 
 Each event is a JSON object sent as the `data` field of an SSE message:
@@ -54,6 +54,9 @@ orchestrator_phase (synthesizing)     ← synthesizer running
 
 artifact_ready                        ← final artifact
 done                                  ← session complete
+
+[on error at any point:]
+  error                               ← session failed, auto-cancelled
 ```
 
 For refocus sessions, an extra `orchestrator_phase (thinking)` is emitted before `spawning`.
@@ -142,6 +145,14 @@ The final markdown artifact is ready. `durationSec` is the total wall-clock time
 
 ---
 
+### `error`
+```json
+{ "type": "error", "message": "string" }
+```
+An unrecoverable error occurred during the research graph execution (e.g. model failure, malformed LLM output). The session is automatically cancelled. No `done` event follows.
+
+---
+
 ### `done`
 ```json
 { "type": "done" }
@@ -162,4 +173,4 @@ The session is marked as cancelled in the database. Any findings collected befor
 
 ## Error handling
 
-If the stream generator throws an unhandled exception, the SSE connection closes without a `done` event. The session is automatically marked as cancelled in the `finally` block.
+If the research graph throws an exception, an `error` event is emitted with the exception message before the SSE connection closes. The session is automatically marked as cancelled in the `finally` block. The client receives the error and can display it to the user.

@@ -19,6 +19,7 @@ sessions
   created_at    TEXT
   completed_at  TEXT  set when synthesis completes
   cancelled_at  TEXT  set when session is cancelled or errors
+  duration_sec  REAL  wall-clock duration of the session
 
 findings
   id          INTEGER (autoincrement)
