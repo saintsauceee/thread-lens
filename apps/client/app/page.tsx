@@ -7,7 +7,7 @@ import SubAgentCard from './components/SubAgentCard';
 import ResearchArtifact from './components/ResearchArtifact';
 import FollowUpInput from './components/FollowUpInput';
 import HistoryMenu from './components/HistoryMenu';
-import ToastContainer from './components/Toast';
+import ToastContainer, { toast } from './components/Toast';
 import {
   AppPhase,
   OrchestratorPhase,
@@ -741,13 +741,25 @@ export default function Home() {
           setAppPhase('complete');
           break;
 
+        case 'error':
+          toast(event.message || 'Research failed unexpectedly');
+          setCancelled(true);
+          es.close();
+          break;
+
         case 'done':
           es.close();
           break;
       }
     };
 
-    es.onerror = () => es.close();
+    es.onerror = () => {
+      if (appPhase === 'researching' && !cancelled) {
+        toast('Connection to research server lost');
+        setCancelled(true);
+      }
+      es.close();
+    };
 
     return () => es.close();
   }, [appPhase, streamVersion]);
