@@ -1,5 +1,5 @@
 import bcrypt
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 from thread_lens_db import create_user, get_db, get_user_by_email
@@ -84,7 +84,7 @@ async def logout():
 
 
 @router.post("/refresh")
-async def refresh(request):
+async def refresh(request: Request):
     token = request.cookies.get("refresh_token")
     if not token:
         raise HTTPException(status_code=401, detail="No refresh token")
@@ -105,6 +105,6 @@ async def refresh(request):
 
 
 @router.get("/me")
-async def me(request):
+async def me(request: Request):
     user = await get_current_user(request)
     return {"id": user["id"], "email": user["email"]}

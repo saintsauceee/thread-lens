@@ -30,7 +30,9 @@ def mock_db():
     async def _fake_db():
         yield MagicMock()
 
-    with patch("research.routes.research.get_db", _fake_db):
+    with patch("research.routes.research.get_db", _fake_db), \
+         patch("research.routes.auth.get_db", _fake_db), \
+         patch("research.auth.get_db", _fake_db):
         yield
 
 
