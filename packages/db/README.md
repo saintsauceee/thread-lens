@@ -1,6 +1,6 @@
 # DB
 
-Shared async SQLite database layer for Thread Lens. Used by the research API to persist knowledge bases, sessions, agents, and findings.
+Shared async PostgreSQL database layer for Thread Lens. Used by the research API to persist knowledge bases, sessions, agents, and findings.
 
 ## Setup
 
@@ -12,7 +12,7 @@ pip install -e .
 
 | Variable | Default | Description |
 |---|---|---|
-| `THREAD_LENS_DB_PATH` | `thread_lens.db` | Path to the SQLite database file |
+| `DATABASE_URL` | `postgresql://postgres:postgres@localhost:5432/thread_lens` | PostgreSQL connection string |
 
 The schema is auto-created on first call to `init_db()`.
 
@@ -30,7 +30,7 @@ Session status is derived, not stored: `artifact != ''` → complete, `cancelled
 ## API
 
 ```python
-from thread_lens_db import get_db, init_db
+from thread_lens_db import get_db, init_db, close_db
 
 # Knowledge bases
 create_kb(db, query) → dict
@@ -44,6 +44,7 @@ create_session(db, kb_id, follow_up?) → dict
 complete_session(db, session_id, duration_sec)
 cancel_session(db, session_id)
 get_sessions(db, kb_id) → list[dict]
+get_latest_session_duration(db, kb_id) → float | None
 
 # Agents
 save_agent(db, kb_id, session_id, agent_index, task, round)
