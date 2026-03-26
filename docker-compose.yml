@@ -1,4 +1,20 @@
 services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: thread_lens
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
   research:
     build:
       context: .
@@ -8,9 +24,10 @@ services:
     env_file:
       - .env
     environment:
-      THREAD_LENS_DB_PATH: /data/thread_lens.db
-    volumes:
-      - db:/data
+      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/thread_lens
+    depends_on:
+      postgres:
+        condition: service_healthy
 
   client:
     build:
@@ -22,4 +39,4 @@ services:
       - research
 
 volumes:
-  db:
+  pgdata:

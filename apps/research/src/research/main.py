@@ -6,7 +6,7 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from thread_lens_db import init_db
+from thread_lens_db import init_db, close_db
 
 from research.routes import research
 
@@ -15,6 +15,7 @@ from research.routes import research
 async def lifespan(app: FastAPI):
     await init_db()
     yield
+    await close_db()
 
 
 app = FastAPI(title="Thread Lens Research API", lifespan=lifespan)
