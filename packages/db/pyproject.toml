@@ -4,7 +4,7 @@ version = "0.1.0"
 description = "Shared database layer for Thread Lens services"
 requires-python = ">=3.11"
 dependencies = [
-    "aiosqlite>=0.20.0",
+    "asyncpg>=0.30.0",
 ]
 
 [build-system]

@@ -1,44 +1,49 @@
 import os
-import aiosqlite
+import asyncpg
 from contextlib import asynccontextmanager
-from pathlib import Path
 from typing import AsyncIterator
 
-DB_PATH = Path(os.environ.get("THREAD_LENS_DB_PATH", "thread_lens.db"))
+DATABASE_URL = os.environ.get(
+    "DATABASE_URL", "postgresql://postgres:postgres@localhost:5432/thread_lens"
+)
+
+_pool: asyncpg.Pool | None = None
 
 _SCHEMA = """
 CREATE TABLE IF NOT EXISTS knowledge_bases (
     id TEXT PRIMARY KEY,
     query TEXT NOT NULL,
     artifact TEXT NOT NULL DEFAULT '',
-    created_at TEXT NOT NULL,
-    updated_at TEXT NOT NULL
+    created_at TIMESTAMPTZ NOT NULL,
+    updated_at TIMESTAMPTZ NOT NULL
 );
 CREATE TABLE IF NOT EXISTS findings (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    id BIGSERIAL PRIMARY KEY,
     kb_id TEXT NOT NULL REFERENCES knowledge_bases(id) ON DELETE CASCADE,
     session_id TEXT NOT NULL,
     topic TEXT NOT NULL,
     findings TEXT NOT NULL,
     sources TEXT NOT NULL DEFAULT '[]',
-    created_at TEXT NOT NULL
+    created_at TIMESTAMPTZ NOT NULL
 );
 CREATE TABLE IF NOT EXISTS sessions (
     id TEXT PRIMARY KEY,
     kb_id TEXT NOT NULL REFERENCES knowledge_bases(id) ON DELETE CASCADE,
     follow_up TEXT,
-    created_at TEXT NOT NULL,
-    completed_at TEXT
+    created_at TIMESTAMPTZ NOT NULL,
+    completed_at TIMESTAMPTZ,
+    cancelled_at TIMESTAMPTZ,
+    duration_sec DOUBLE PRECISION
 );
 CREATE TABLE IF NOT EXISTS agents (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    id BIGSERIAL PRIMARY KEY,
     kb_id TEXT NOT NULL REFERENCES knowledge_bases(id) ON DELETE CASCADE,
     session_id TEXT NOT NULL,
     agent_index INTEGER NOT NULL,
     task TEXT NOT NULL,
     round INTEGER NOT NULL,
     source_count INTEGER,
-    created_at TEXT NOT NULL
+    created_at TIMESTAMPTZ NOT NULL
 );
 CREATE INDEX IF NOT EXISTS findings_kb_id ON findings(kb_id);
 CREATE INDEX IF NOT EXISTS sessions_kb_id ON sessions(kb_id);
@@ -47,23 +52,20 @@ CREATE INDEX IF NOT EXISTS agents_kb_id ON agents(kb_id);
 
 
 async def init_db() -> None:
-    async with aiosqlite.connect(DB_PATH) as db:
-        await db.executescript(_SCHEMA)
-        try:
-            await db.execute("ALTER TABLE sessions ADD COLUMN cancelled_at TEXT")
-            await db.commit()
-        except Exception:
-            pass
-        try:
-            await db.execute("ALTER TABLE sessions ADD COLUMN duration_sec REAL")
-            await db.commit()
-        except Exception:
-            pass
+    global _pool
+    _pool = await asyncpg.create_pool(DATABASE_URL, min_size=2, max_size=10)
+    async with _pool.acquire() as conn:
+        await conn.execute(_SCHEMA)
+
+
+async def close_db() -> None:
+    global _pool
+    if _pool:
+        await _pool.close()
+        _pool = None
 
 
 @asynccontextmanager
-async def get_db() -> AsyncIterator[aiosqlite.Connection]:
-    async with aiosqlite.connect(DB_PATH) as db:
-        db.row_factory = aiosqlite.Row
-        await db.execute("PRAGMA foreign_keys = ON")
-        yield db
+async def get_db() -> AsyncIterator[asyncpg.Connection]:
+    async with _pool.acquire() as conn:
+        yield conn
