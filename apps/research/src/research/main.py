@@ -8,13 +8,16 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from thread_lens_db import close_db, init_db
 
+from research.cache import close_cache, init_cache
 from research.routes import research
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     await init_db()
+    await init_cache()
     yield
+    await close_cache()
     await close_db()
 
 
