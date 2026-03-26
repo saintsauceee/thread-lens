@@ -68,12 +68,12 @@ async def clarify(query: str, fast: bool = False, user: dict = Depends(get_curre
 
 @router.get("/kbs")
 async def list_kbs_endpoint(user: dict = Depends(get_current_user)):
-    cached = await get_cached_kb_list()
+    cached = await get_cached_kb_list(user["id"])
     if cached is not None:
         return cached
     async with get_db() as db:
         kbs = await list_kbs(db, user["id"])
-    await set_cached_kb_list(kbs)
+    await set_cached_kb_list(user["id"], kbs)
     return kbs
 
 
@@ -90,7 +90,7 @@ async def cancel_session_endpoint(session_id: str, user: dict = Depends(get_curr
 async def delete_kb_endpoint(kb_id: str, user: dict = Depends(get_current_user)):
     async with get_db() as db:
         await delete_kb(db, kb_id, user["id"])
-    await invalidate_kb(kb_id)
+    await invalidate_kb(kb_id, user["id"])
     return {"ok": True}
 
 
@@ -195,7 +195,7 @@ async def stream_research(
                 else:
                     new_kb = await create_kb(db, query, user["id"])
                     active_kb_id = new_kb["id"]
-                    await invalidate_kb_list()
+                    await invalidate_kb_list(user["id"])
             else:
                 new_kb = await create_kb(db, query, user["id"])
                 active_kb_id = new_kb["id"]
@@ -321,7 +321,7 @@ async def stream_research(
 
                         await update_artifact(db, active_kb_id, artifact)
                         await complete_session(db, new_session_id, duration)
-                        await invalidate_kb(active_kb_id)
+                        await invalidate_kb(active_kb_id, user["id"])
                         session_completed = True
 
                         yield emit({
