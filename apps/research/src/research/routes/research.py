@@ -26,6 +26,14 @@ from thread_lens_db import (
 from research.agent import build_graph
 from research.agent.nodes import clarify_query
 from research.agent.state import SubagentResult
+from research.cache import (
+    get_cached_kb,
+    get_cached_kb_list,
+    invalidate_kb,
+    invalidate_kb_list,
+    set_cached_kb,
+    set_cached_kb_list,
+)
 from research.models import ResearchRequest, ResearchResponse
 
 router = APIRouter(prefix="/research", tags=["research"])
@@ -59,8 +67,13 @@ async def clarify(query: str, fast: bool = False):
 
 @router.get("/kbs")
 async def list_kbs_endpoint():
+    cached = await get_cached_kb_list()
+    if cached is not None:
+        return cached
     async with get_db() as db:
-        return await list_kbs(db)
+        kbs = await list_kbs(db)
+    await set_cached_kb_list(kbs)
+    return kbs
 
 
 @router.post("/session/{session_id}/cancel")
@@ -76,15 +89,20 @@ async def cancel_session_endpoint(session_id: str):
 async def delete_kb_endpoint(kb_id: str):
     async with get_db() as db:
         await delete_kb(db, kb_id)
+    await invalidate_kb(kb_id)
     return {"ok": True}
 
 
 @router.get("/kb/{kb_id}")
 async def get_kb_endpoint(kb_id: str):
+    cached = await get_cached_kb(kb_id)
+    if cached is not None:
+        return cached
     async with get_db() as db:
         kb = await get_kb(db, kb_id)
     if not kb:
         raise HTTPException(status_code=404, detail="KB not found")
+    await set_cached_kb(kb_id, kb)
     return kb
 
 
@@ -175,9 +193,11 @@ async def stream_research(
                 else:
                     new_kb = await create_kb(db, query)
                     active_kb_id = new_kb["id"]
+                    await invalidate_kb_list()
             else:
                 new_kb = await create_kb(db, query)
                 active_kb_id = new_kb["id"]
+                await invalidate_kb_list()
 
             # Within-session refocus: load partial results from DB
             partial_results: list[SubagentResult] = []
@@ -299,6 +319,7 @@ async def stream_research(
 
                         await update_artifact(db, active_kb_id, artifact)
                         await complete_session(db, new_session_id, duration)
+                        await invalidate_kb(active_kb_id)
                         session_completed = True
 
                         yield emit({
