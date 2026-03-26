@@ -136,12 +136,12 @@ Subagents are dispatched in parallel via LangGraph's `Send()`. Results accumulat
 |----------|-------------|
 | `GOOGLE_API_KEY_1` … `GOOGLE_API_KEY_5` | Google AI API keys (rotated automatically) |
 | `GOOGLE_API_KEY` | Fallback if numbered keys are not set |
-| `THREAD_LENS_DB_PATH` | Path to the SQLite database file |
+| `DATABASE_URL` | PostgreSQL connection string |
 
 The key rotator tracks per-key RPM (4/min) and RPD (18/day) limits and backs off automatically on rate limit errors.
 
 ## Internal packages
 
-**`packages/db`** — shared SQLite layer. The research app uses it to persist knowledge bases, sessions, and findings. The database path is configured via `THREAD_LENS_DB_PATH`.
+**`packages/db`** — shared PostgreSQL layer. The research app uses it to persist knowledge bases, sessions, and findings. The database connection is configured via `DATABASE_URL`.
 
 **`packages/mcp-reddit`** — MCP server that exposes Reddit tools (`search_reddit`, `get_post`, `get_top_posts`) to subagents. The research app spawns it as a subprocess at runtime via `langchain-mcp-adapters`. It must be installed alongside the research app (handled automatically in Docker).
