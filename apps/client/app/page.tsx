@@ -1,6 +1,8 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
+import { useRouter } from 'next/navigation';
+import { useAuth } from './components/AuthProvider';
 import SearchInput from './components/SearchInput';
 import OrchestratorCard from './components/OrchestratorCard';
 import SubAgentCard from './components/SubAgentCard';
@@ -58,10 +60,12 @@ function BackgroundEffects() {
 function TopBar({
   onOpenHistory,
   onNew,
+  onLogout,
   sticky,
 }: {
   onOpenHistory: () => void;
   onNew?: () => void;
+  onLogout?: () => void;
   sticky?: boolean;
 }) {
   return (
@@ -129,6 +133,27 @@ function TopBar({
             <kbd style={{ fontSize: '10px', fontWeight: 700, background: 'rgba(250,204,21,0.1)', border: '1px solid rgba(250,204,21,0.15)', padding: '2px 6px', borderRadius: '5px', color: 'rgba(250,204,21,0.8)' }}>K</kbd>
           </div>
         </button>
+        {onLogout && (
+          <button
+            onClick={onLogout}
+            style={{
+              display: 'flex', alignItems: 'center', gap: '5px',
+              padding: '7px 14px', borderRadius: '10px',
+              background: 'rgba(255,255,255,0.04)',
+              border: '1px solid rgba(255,255,255,0.1)',
+              color: 'rgba(255,255,255,0.4)',
+              cursor: 'pointer', transition: 'background 0.15s, color 0.15s',
+              fontSize: '12px', fontWeight: 500,
+            }}
+            onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.08)'; e.currentTarget.style.color = 'rgba(255,255,255,0.7)'; }}
+            onMouseLeave={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.04)'; e.currentTarget.style.color = 'rgba(255,255,255,0.4)'; }}
+          >
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9" />
+            </svg>
+            Sign out
+          </button>
+        )}
       </div>
     </nav>
   );
@@ -139,9 +164,11 @@ function TopBar({
 function LandingView({
   onSubmit,
   onOpenHistory,
+  onLogout,
 }: {
   onSubmit: (q: string, fast: boolean) => void;
   onOpenHistory: () => void;
+  onLogout: () => void;
 }) {
   const glowRef = useRef<HTMLDivElement>(null);
 
@@ -169,7 +196,7 @@ function LandingView({
         }}
       />
 
-      <TopBar onOpenHistory={onOpenHistory} />
+      <TopBar onOpenHistory={onOpenHistory} onLogout={onLogout} />
 
       {/* Hero */}
       <div style={{
@@ -332,6 +359,7 @@ function ResearchView({
   onRefocus,
   onFollowUp,
   onOpenHistory,
+  onLogout,
 }: {
   orchestratorPhase: OrchestratorPhase;
   agents: SubAgent[];
@@ -346,12 +374,13 @@ function ResearchView({
   onRefocus: (instruction: string) => void;
   onFollowUp: (question: string) => void;
   onOpenHistory: () => void;
+  onLogout: () => void;
 }) {
   const isResearching = activeStatus === 'running';
 
   return (
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', position: 'relative', zIndex: 1 }}>
-      <TopBar onOpenHistory={onOpenHistory} onNew={onReset} sticky />
+      <TopBar onOpenHistory={onOpenHistory} onNew={onReset} onLogout={onLogout} sticky />
 
       <div style={{ flex: 1, maxWidth: '880px', margin: '0 auto', width: '100%', padding: '28px 40px' }}>
         <OrchestratorCard
@@ -385,6 +414,7 @@ function ClarifyView({
   onSkip,
   onNew,
   onOpenHistory,
+  onLogout,
 }: {
   query: string;
   fast: boolean;
@@ -392,6 +422,7 @@ function ClarifyView({
   onSkip: () => void;
   onNew: () => void;
   onOpenHistory: () => void;
+  onLogout: () => void;
 }) {
   const [questions, setQuestions] = useState<string[]>([]);
   const [answers, setAnswers] = useState<string[]>([]);
@@ -399,7 +430,7 @@ function ClarifyView({
 
   useEffect(() => {
     let stale = false;
-    fetch(`${API_BASE}/research/clarify?query=${encodeURIComponent(query)}&fast=${fast}`)
+    fetch(`${API_BASE}/research/clarify?query=${encodeURIComponent(query)}&fast=${fast}`, { credentials: 'include' })
       .then((r) => r.json())
       .then((data) => {
         if (stale) return;
@@ -419,7 +450,7 @@ function ClarifyView({
 
   return (
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', position: 'relative', zIndex: 1 }}>
-      <TopBar onOpenHistory={onOpenHistory} onNew={onNew} sticky />
+      <TopBar onOpenHistory={onOpenHistory} onNew={onNew} onLogout={onLogout} sticky />
 
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '32px', padding: '0 24px' }}>
         <div style={{ position: 'relative' }}>
@@ -516,6 +547,15 @@ function ClarifyView({
 // ── Main ─────────────────────────────────────────────────────────────────────
 
 export default function Home() {
+  const router = useRouter();
+  const { user, loading: authLoading, logout } = useAuth();
+
+  useEffect(() => {
+    if (!authLoading && !user) {
+      router.replace('/auth/login');
+    }
+  }, [authLoading, user, router]);
+
   const [appPhase, setAppPhase] = useState<AppPhase>('idle');
   const [query, setQuery] = useState('');
   const [fast, setFast] = useState(false);
@@ -548,8 +588,8 @@ export default function Home() {
     esRef.current?.close();
     try {
       const [kbRes, agentsRes] = await Promise.all([
-        fetch(`${API_BASE}/research/kb/${entry.id}`),
-        fetch(`${API_BASE}/research/kb/${entry.id}/agents`),
+        fetch(`${API_BASE}/research/kb/${entry.id}`, { credentials: 'include' }),
+        fetch(`${API_BASE}/research/kb/${entry.id}/agents`, { credentials: 'include' }),
       ]);
       if (!kbRes.ok) return;
       const kb = await kbRes.json();
@@ -619,7 +659,7 @@ export default function Home() {
     esRef.current?.close();
     setCancelled(true);
     if (sessionId) {
-      fetch(`${API_BASE}/research/session/${sessionId}/cancel`, { method: 'POST' }).catch(() => {});
+      fetch(`${API_BASE}/research/session/${sessionId}/cancel`, { method: 'POST', credentials: 'include' }).catch(() => {});
     }
   }
 
@@ -660,7 +700,7 @@ export default function Home() {
       params.set('follow_up', followUp);
     }
 
-    const es = new EventSource(`${API_BASE}/research/stream?${params}`);
+    const es = new EventSource(`${API_BASE}/research/stream?${params}`, { withCredentials: true });
     esRef.current = es;
 
     es.onmessage = (e) => {
@@ -768,12 +808,16 @@ export default function Home() {
 
   const openHistory = () => setHistoryMenuOpen(true);
 
+  if (authLoading || !user) {
+    return <div style={{ minHeight: '100vh', background: '#07080e' }} />;
+  }
+
   if (appPhase === 'idle') {
     return (
       <>
         <BackgroundEffects />
         <HistoryMenu open={historyMenuOpen} onClose={() => setHistoryMenuOpen(false)} onSelect={handleHistorySelect} currentKbId={kbId} />
-        <LandingView onSubmit={handleSubmit} onOpenHistory={openHistory} />
+        <LandingView onSubmit={handleSubmit} onOpenHistory={openHistory} onLogout={logout} />
         <ToastContainer />
       </>
     );
@@ -791,6 +835,7 @@ export default function Home() {
           onSkip={() => startResearch([])}
           onNew={handleReset}
           onOpenHistory={openHistory}
+          onLogout={logout}
         />
         <ToastContainer />
       </>
@@ -820,6 +865,7 @@ export default function Home() {
         onRefocus={handleRefocus}
         onFollowUp={handleFollowUp}
         onOpenHistory={openHistory}
+        onLogout={logout}
       />
       <ToastContainer />
     </>

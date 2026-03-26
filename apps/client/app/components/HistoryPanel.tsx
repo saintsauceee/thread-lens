@@ -32,7 +32,7 @@ export default function HistoryPanel({
     if (!open) return;
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setEntries(null);
-    fetch(`${API_BASE}/research/kbs`)
+    fetch(`${API_BASE}/research/kbs`, { credentials: 'include' })
       .then((r) => r.json())
       .then((data: { id: string; query: string; updated_at: string }[]) => {
         setEntries(data.map((d) => ({ id: d.id, query: d.query, updatedAt: d.updated_at })));
