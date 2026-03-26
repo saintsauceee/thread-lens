@@ -4,15 +4,22 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 from httpx import ASGITransport, AsyncClient
 
+FAKE_USER = {"id": "test-user-id", "email": "test@test.com"}
+
 
 @pytest.fixture
 async def client():
     with patch("research.main.init_db", new_callable=AsyncMock), \
          patch("research.main.init_cache", new_callable=AsyncMock):
+        from research.auth import get_current_user
         from research.main import app
+
+        app.dependency_overrides[get_current_user] = lambda: FAKE_USER
 
         async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as c:
             yield c
+
+        app.dependency_overrides.clear()
 
 
 @pytest.fixture
