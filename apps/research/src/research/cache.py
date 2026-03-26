@@ -28,7 +28,8 @@ def _kb_key(kb_id: str) -> str:
     return f"kb:{kb_id}"
 
 
-KB_LIST_KEY = "kb:list"
+def _kb_list_key(user_id: str) -> str:
+    return f"kb:list:{user_id}"
 
 
 async def get_cached_kb(kb_id: str) -> dict | None:
@@ -40,20 +41,20 @@ async def set_cached_kb(kb_id: str, kb: dict) -> None:
     await _redis.set(_kb_key(kb_id), json.dumps(kb, default=str), ex=KB_TTL)
 
 
-async def get_cached_kb_list() -> list[dict] | None:
-    data = await _redis.get(KB_LIST_KEY)
+async def get_cached_kb_list(user_id: str) -> list[dict] | None:
+    data = await _redis.get(_kb_list_key(user_id))
     return json.loads(data) if data else None
 
 
-async def set_cached_kb_list(kbs: list[dict]) -> None:
-    await _redis.set(KB_LIST_KEY, json.dumps(kbs, default=str), ex=KB_LIST_TTL)
+async def set_cached_kb_list(user_id: str, kbs: list[dict]) -> None:
+    await _redis.set(_kb_list_key(user_id), json.dumps(kbs, default=str), ex=KB_LIST_TTL)
 
 
-async def invalidate_kb(kb_id: str) -> None:
-    """Clear cache for a specific KB and the list."""
-    await _redis.delete(_kb_key(kb_id), KB_LIST_KEY)
+async def invalidate_kb(kb_id: str, user_id: str) -> None:
+    """Clear cache for a specific KB and the user's list."""
+    await _redis.delete(_kb_key(kb_id), _kb_list_key(user_id))
 
 
-async def invalidate_kb_list() -> None:
+async def invalidate_kb_list(user_id: str) -> None:
     """Clear just the list cache (e.g. after creating a new KB)."""
-    await _redis.delete(KB_LIST_KEY)
+    await _redis.delete(_kb_list_key(user_id))

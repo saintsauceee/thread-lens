@@ -46,7 +46,7 @@ export default function HistoryMenu({
       inputRef.current?.focus();
     });
 
-    fetch(`${API_BASE}/research/kbs`)
+    fetch(`${API_BASE}/research/kbs`, { credentials: 'include' })
       .then((r) => r.json())
       .then((data: { id: string; query: string; updated_at: string; artifact_preview: string; status?: string }[]) => {
         setEntries(data.map((d) => ({

@@ -1,7 +1,8 @@
 import os
-import asyncpg
 from contextlib import asynccontextmanager
 from typing import AsyncIterator
+
+import asyncpg
 
 DATABASE_URL = os.environ.get(
     "DATABASE_URL", "postgresql://postgres:postgres@localhost:5432/thread_lens"
@@ -10,6 +11,12 @@ DATABASE_URL = os.environ.get(
 _pool: asyncpg.Pool | None = None
 
 _SCHEMA = """
+CREATE TABLE IF NOT EXISTS users (
+    id TEXT PRIMARY KEY,
+    email TEXT UNIQUE NOT NULL,
+    password_hash TEXT NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL
+);
 CREATE TABLE IF NOT EXISTS knowledge_bases (
     id TEXT PRIMARY KEY,
     query TEXT NOT NULL,
@@ -48,6 +55,8 @@ CREATE TABLE IF NOT EXISTS agents (
 CREATE INDEX IF NOT EXISTS findings_kb_id ON findings(kb_id);
 CREATE INDEX IF NOT EXISTS sessions_kb_id ON sessions(kb_id);
 CREATE INDEX IF NOT EXISTS agents_kb_id ON agents(kb_id);
+ALTER TABLE knowledge_bases ADD COLUMN IF NOT EXISTS user_id TEXT REFERENCES users(id);
+CREATE INDEX IF NOT EXISTS kb_user_id ON knowledge_bases(user_id);
 """
 
 

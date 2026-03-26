@@ -2,7 +2,7 @@ import asyncio
 import json
 from typing import Optional
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 from sse_starlette.sse import EventSourceResponse
 from thread_lens_db import (
     append_findings,
@@ -26,6 +26,7 @@ from thread_lens_db import (
 from research.agent import build_graph
 from research.agent.nodes import clarify_query
 from research.agent.state import SubagentResult
+from research.auth import get_current_user
 from research.cache import (
     get_cached_kb,
     get_cached_kb_list,
@@ -60,24 +61,24 @@ def _INITIAL_STATE(query, fast=False, clarifications=None, partial_results=None,
 
 
 @router.get("/clarify")
-async def clarify(query: str, fast: bool = False):
+async def clarify(query: str, fast: bool = False, user: dict = Depends(get_current_user)):
     questions = await clarify_query(query, fast)
     return {"questions": questions}
 
 
 @router.get("/kbs")
-async def list_kbs_endpoint():
-    cached = await get_cached_kb_list()
+async def list_kbs_endpoint(user: dict = Depends(get_current_user)):
+    cached = await get_cached_kb_list(user["id"])
     if cached is not None:
         return cached
     async with get_db() as db:
-        kbs = await list_kbs(db)
-    await set_cached_kb_list(kbs)
+        kbs = await list_kbs(db, user["id"])
+    await set_cached_kb_list(user["id"], kbs)
     return kbs
 
 
 @router.post("/session/{session_id}/cancel")
-async def cancel_session_endpoint(session_id: str):
+async def cancel_session_endpoint(session_id: str, user: dict = Depends(get_current_user)):
     if task := _running_tasks.pop(session_id, None):
         task.cancel()
     async with get_db() as db:
@@ -86,20 +87,20 @@ async def cancel_session_endpoint(session_id: str):
 
 
 @router.delete("/kb/{kb_id}")
-async def delete_kb_endpoint(kb_id: str):
+async def delete_kb_endpoint(kb_id: str, user: dict = Depends(get_current_user)):
     async with get_db() as db:
-        await delete_kb(db, kb_id)
-    await invalidate_kb(kb_id)
+        await delete_kb(db, kb_id, user["id"])
+    await invalidate_kb(kb_id, user["id"])
     return {"ok": True}
 
 
 @router.get("/kb/{kb_id}")
-async def get_kb_endpoint(kb_id: str):
+async def get_kb_endpoint(kb_id: str, user: dict = Depends(get_current_user)):
     cached = await get_cached_kb(kb_id)
     if cached is not None:
         return cached
     async with get_db() as db:
-        kb = await get_kb(db, kb_id)
+        kb = await get_kb(db, kb_id, user["id"])
     if not kb:
         raise HTTPException(status_code=404, detail="KB not found")
     await set_cached_kb(kb_id, kb)
@@ -107,9 +108,9 @@ async def get_kb_endpoint(kb_id: str):
 
 
 @router.get("/kb/{kb_id}/agents")
-async def get_kb_agents_endpoint(kb_id: str):
+async def get_kb_agents_endpoint(kb_id: str, user: dict = Depends(get_current_user)):
     async with get_db() as db:
-        kb = await get_kb(db, kb_id)
+        kb = await get_kb(db, kb_id, user["id"])
         if not kb:
             raise HTTPException(status_code=404, detail="KB not found")
         raw_agents = await get_kb_agents(db, kb_id)
@@ -135,9 +136,9 @@ async def get_kb_agents_endpoint(kb_id: str):
 
 
 @router.get("/kb/{kb_id}/export")
-async def export_kb_endpoint(kb_id: str):
+async def export_kb_endpoint(kb_id: str, user: dict = Depends(get_current_user)):
     async with get_db() as db:
-        kb = await get_kb(db, kb_id)
+        kb = await get_kb(db, kb_id, user["id"])
         if not kb:
             raise HTTPException(status_code=404, detail="KB not found")
         findings = await get_findings(db, kb_id)
@@ -160,6 +161,7 @@ async def stream_research(
     refocus: Optional[str] = None,
     kb_id: Optional[str] = None,
     follow_up: Optional[str] = None,
+    user: dict = Depends(get_current_user),
 ):
     async def generate():
         agent_id_counter = 0
@@ -185,17 +187,17 @@ async def stream_research(
             kb_existing_artifact = ""
 
             if is_follow_up:
-                existing_kb = await get_kb(db, kb_id)
+                existing_kb = await get_kb(db, kb_id, user["id"])
                 if existing_kb:
                     kb_existing_results = await get_findings(db, kb_id)
                     kb_existing_artifact = existing_kb["artifact"]
                     active_kb_id = kb_id
                 else:
-                    new_kb = await create_kb(db, query)
+                    new_kb = await create_kb(db, query, user["id"])
                     active_kb_id = new_kb["id"]
-                    await invalidate_kb_list()
+                    await invalidate_kb_list(user["id"])
             else:
-                new_kb = await create_kb(db, query)
+                new_kb = await create_kb(db, query, user["id"])
                 active_kb_id = new_kb["id"]
                 await invalidate_kb_list()
 
@@ -319,7 +321,7 @@ async def stream_research(
 
                         await update_artifact(db, active_kb_id, artifact)
                         await complete_session(db, new_session_id, duration)
-                        await invalidate_kb(active_kb_id)
+                        await invalidate_kb(active_kb_id, user["id"])
                         session_completed = True
 
                         yield emit({
@@ -342,7 +344,7 @@ async def stream_research(
 
 
 @router.post("", response_model=ResearchResponse)
-async def run_research(req: ResearchRequest) -> ResearchResponse:
+async def run_research(req: ResearchRequest, user: dict = Depends(get_current_user)) -> ResearchResponse:
     try:
         result = await _graph.ainvoke(_INITIAL_STATE(req.query))
     except Exception as e:

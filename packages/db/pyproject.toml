@@ -5,6 +5,7 @@ description = "Shared database layer for Thread Lens services"
 requires-python = ">=3.11"
 dependencies = [
     "asyncpg>=0.30.0",
+    "bcrypt>=4.1.0",
 ]
 
 [build-system]
