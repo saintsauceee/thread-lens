@@ -9,7 +9,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from thread_lens_db import close_db, init_db
 
 from research.cache import close_cache, init_cache
-from research.routes import research
+from research.routes import auth, research
 
 
 @asynccontextmanager
@@ -26,10 +26,12 @@ app = FastAPI(title="Thread Lens Research API", lifespan=lifespan)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["http://localhost:3000"],
+    allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
+app.include_router(auth.router)
 app.include_router(research.router)
 
 
