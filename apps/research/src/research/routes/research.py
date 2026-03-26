@@ -15,6 +15,7 @@ from thread_lens_db import (
     get_findings,
     get_kb,
     get_kb_agents,
+    get_latest_session_duration,
     get_session_findings,
     list_kbs,
     save_agent,
@@ -94,13 +95,7 @@ async def get_kb_agents_endpoint(kb_id: str):
         if not kb:
             raise HTTPException(status_code=404, detail="KB not found")
         raw_agents = await get_kb_agents(db, kb_id)
-        # Fetch duration from most recent completed session
-        async with db.execute(
-            "SELECT duration_sec FROM sessions WHERE kb_id = ? AND completed_at IS NOT NULL ORDER BY completed_at DESC LIMIT 1",
-            (kb_id,),
-        ) as cur:
-            row = await cur.fetchone()
-        duration_sec = row["duration_sec"] if row else None
+        duration_sec = await get_latest_session_duration(db, kb_id)
 
     agents = [
         {
