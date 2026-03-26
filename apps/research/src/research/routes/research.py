@@ -23,6 +23,9 @@ from thread_lens_db import (
     update_artifact,
 )
 
+from research.agent import build_graph
+from research.agent.nodes import clarify_query
+from research.agent.state import SubagentResult
 from research.cache import (
     get_cached_kb,
     get_cached_kb_list,
@@ -31,9 +34,6 @@ from research.cache import (
     set_cached_kb,
     set_cached_kb_list,
 )
-from research.agent import build_graph
-from research.agent.nodes import clarify_query
-from research.agent.state import SubagentResult
 from research.models import ResearchRequest, ResearchResponse
 
 router = APIRouter(prefix="/research", tags=["research"])
