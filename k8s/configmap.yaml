@@ -1,0 +1,10 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: thread-lens-config
+  namespace: thread-lens
+data:
+  DATABASE_URL: "postgresql://postgres:postgres@postgres:5432/thread_lens"
+  REDIS_URL: "redis://redis:6379"
+  RABBITMQ_URL: "amqp://guest:guest@rabbitmq:5672/"
+  CORS_ORIGINS: "http://thread-lens.local"

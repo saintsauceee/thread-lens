@@ -1,0 +1,50 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: research
+  namespace: thread-lens
+spec:
+  selector:
+    app: research
+  ports:
+    - port: 8000
+      targetPort: 8000
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: research
+  namespace: thread-lens
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: research
+  template:
+    metadata:
+      labels:
+        app: research
+    spec:
+      containers:
+        - name: research
+          image: thread-lens-research:dev
+          imagePullPolicy: Never
+          ports:
+            - containerPort: 8000
+          envFrom:
+            - configMapRef:
+                name: thread-lens-config
+            - secretRef:
+                name: thread-lens-secrets
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: 8000
+            initialDelaySeconds: 10
+            periodSeconds: 5
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 8000
+            initialDelaySeconds: 20
+            periodSeconds: 15

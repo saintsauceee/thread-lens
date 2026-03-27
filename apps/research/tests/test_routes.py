@@ -1,6 +1,12 @@
 from unittest.mock import AsyncMock, patch
 
 
+async def test_healthz(client):
+    r = await client.get("/healthz")
+    assert r.status_code == 200
+    assert r.json() == {"status": "ok"}
+
+
 async def test_clarify_returns_questions(client):
     questions = ["What platform?", "What time range?"]
     with patch("research.routes.research.clarify_query", new=AsyncMock(return_value=questions)):
