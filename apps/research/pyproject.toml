@@ -11,7 +11,9 @@ dependencies = [
     "python-dotenv>=1.0.0",
     "pyjwt>=2.8.0",
     "redis[hiredis]>=5.0.0",
+    "aio-pika>=9.0.0",
     "thread-lens-db",
+    "thread-lens-events",
     "thread-lens-research-agent",
 ]
 
@@ -27,6 +29,7 @@ packages = ["src/research"]
 
 [tool.uv.sources]
 thread-lens-db = { path = "../../packages/db", editable = true }
+thread-lens-events = { path = "../../packages/events", editable = true }
 thread-lens-research-agent = { path = "../../packages/research-agent", editable = true }
 
 [dependency-groups]

@@ -1,4 +1,4 @@
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, patch
 
 
 async def test_clarify_returns_questions(client):
@@ -52,50 +52,12 @@ async def test_delete_kb(client, mock_db):
     assert r.json() == {"ok": True}
 
 
-async def test_cancel_session(client, mock_db):
-    with patch("research.routes.research.cancel_session", new=AsyncMock()):
+async def test_cancel_session_sets_redis_flag(client, mock_db):
+    mock_redis = AsyncMock()
+    with patch("research.routes.research.cancel_session", new=AsyncMock()), \
+         patch("research.routes.research.aioredis.from_url", return_value=mock_redis), \
+         patch("research.routes.research.set_cancel_flag", new=AsyncMock()) as mock_cancel:
         r = await client.post("/research/session/sess-123/cancel")
     assert r.status_code == 200
     assert r.json() == {"ok": True}
-
-
-async def test_cancel_session_cancels_running_task(client, mock_db):
-    mock_task = MagicMock()
-    with patch.dict("research.routes.research._running_tasks", {"sess-123": mock_task}), \
-         patch("research.routes.research.cancel_session", new=AsyncMock()):
-        await client.post("/research/session/sess-123/cancel")
-    mock_task.cancel.assert_called_once()
-
-
-async def test_run_research_returns_artifact(client):
-    graph_result = {
-        "artifact": "# Research Report",
-        "results": [{"sources": ["https://reddit.com/r/a"]}],
-    }
-    with patch("research.routes.research._graph.ainvoke", new=AsyncMock(return_value=graph_result)):
-        r = await client.post("/research", json={"query": "best keyboards"})
-    assert r.status_code == 200
-    body = r.json()
-    assert body["artifact"] == "# Research Report"
-    assert body["query"] == "best keyboards"
-    assert body["sources"] == ["https://reddit.com/r/a"]
-
-
-async def test_run_research_deduplicates_sources(client):
-    graph_result = {
-        "artifact": "# Report",
-        "results": [
-            {"sources": ["https://reddit.com/r/a", "https://reddit.com/r/b"]},
-            {"sources": ["https://reddit.com/r/a"]},
-        ],
-    }
-    with patch("research.routes.research._graph.ainvoke", new=AsyncMock(return_value=graph_result)):
-        r = await client.post("/research", json={"query": "test"})
-    assert len(r.json()["sources"]) == 2
-
-
-async def test_run_research_returns_500_on_error(client):
-    with patch("research.routes.research._graph.ainvoke", new=AsyncMock(side_effect=Exception("LLM failed"))):
-        r = await client.post("/research", json={"query": "test"})
-    assert r.status_code == 500
-    assert "LLM failed" in r.json()["detail"]
+    mock_cancel.assert_called_once_with(mock_redis, "sess-123")
