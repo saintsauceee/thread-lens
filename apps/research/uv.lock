@@ -1573,17 +1573,14 @@ name = "research"
 version = "0.1.0"
 source = { editable = "." }
 dependencies = [
-    { name = "anthropic" },
     { name = "fastapi" },
     { name = "httpx" },
-    { name = "langchain-google-genai" },
-    { name = "langchain-mcp-adapters" },
-    { name = "langgraph" },
     { name = "pydantic" },
     { name = "pyjwt" },
     { name = "python-dotenv" },
     { name = "redis", extra = ["hiredis"] },
     { name = "thread-lens-db" },
+    { name = "thread-lens-research-agent" },
     { name = "uvicorn", extra = ["standard"] },
 ]
 
@@ -1598,17 +1595,14 @@ dev = [
 
 [package.metadata]
 requires-dist = [
-    { name = "anthropic", specifier = ">=0.40.0" },
     { name = "fastapi", specifier = ">=0.115.0" },
     { name = "httpx", specifier = ">=0.27.0" },
-    { name = "langchain-google-genai", specifier = ">=2.0.0" },
-    { name = "langchain-mcp-adapters", specifier = ">=0.1.0" },
-    { name = "langgraph", specifier = ">=0.2.0" },
     { name = "pydantic", specifier = ">=2.0.0" },
     { name = "pyjwt", specifier = ">=2.8.0" },
     { name = "python-dotenv", specifier = ">=1.0.0" },
     { name = "redis", extras = ["hiredis"], specifier = ">=5.0.0" },
     { name = "thread-lens-db", editable = "../../packages/db" },
+    { name = "thread-lens-research-agent", editable = "../../packages/research-agent" },
     { name = "uvicorn", extras = ["standard"], specifier = ">=0.30.0" },
 ]
 
@@ -1823,6 +1817,25 @@ dependencies = [
 requires-dist = [
     { name = "asyncpg", specifier = ">=0.30.0" },
     { name = "bcrypt", specifier = ">=4.1.0" },
+]
+
+[[package]]
+name = "thread-lens-research-agent"
+version = "0.1.0"
+source = { editable = "../../packages/research-agent" }
+dependencies = [
+    { name = "anthropic" },
+    { name = "langchain-google-genai" },
+    { name = "langchain-mcp-adapters" },
+    { name = "langgraph" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "anthropic", specifier = ">=0.40.0" },
+    { name = "langchain-google-genai", specifier = ">=2.0.0" },
+    { name = "langchain-mcp-adapters", specifier = ">=0.1.0" },
+    { name = "langgraph", specifier = ">=0.2.0" },
 ]
 
 [[package]]
