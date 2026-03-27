@@ -2,6 +2,7 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+import os
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
@@ -11,6 +12,8 @@ from thread_lens_db import close_db, init_db
 from research.cache import close_cache, init_cache
 from research.queue import close_rabbitmq, init_rabbitmq
 from research.routes import auth, research
+
+CORS_ORIGINS = os.environ.get("CORS_ORIGINS", "http://localhost:3000").split(",")
 
 
 @asynccontextmanager
@@ -28,11 +31,17 @@ app = FastAPI(title="Thread Lens Research API", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000"],
+    allow_origins=CORS_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+@app.get("/healthz")
+async def healthz():
+    return {"status": "ok"}
+
 
 app.include_router(auth.router)
 app.include_router(research.router)
