@@ -58,6 +58,8 @@ jobs:
       - run: terraform validate
       - uses: terraform-linters/setup-tflint@v4
       - run: tflint --init
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
       - run: tflint
 
   build:
