@@ -9,6 +9,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from thread_lens_db import close_db, init_db
 
 from research.cache import close_cache, init_cache
+from research.queue import close_rabbitmq, init_rabbitmq
 from research.routes import auth, research
 
 
@@ -16,7 +17,9 @@ from research.routes import auth, research
 async def lifespan(app: FastAPI):
     await init_db()
     await init_cache()
+    await init_rabbitmq()
     yield
+    await close_rabbitmq()
     await close_cache()
     await close_db()
 

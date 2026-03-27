@@ -10,7 +10,8 @@ FAKE_USER = {"id": "test-user-id", "email": "test@test.com"}
 @pytest.fixture
 async def client():
     with patch("research.main.init_db", new_callable=AsyncMock), \
-         patch("research.main.init_cache", new_callable=AsyncMock):
+         patch("research.main.init_cache", new_callable=AsyncMock), \
+         patch("research.main.init_rabbitmq", new_callable=AsyncMock):
         from research.auth import get_current_user
         from research.main import app
 
@@ -46,3 +47,13 @@ def mock_cache():
          patch("research.routes.research.invalidate_kb", new_callable=AsyncMock), \
          patch("research.routes.research.invalidate_kb_list", new_callable=AsyncMock):
         yield
+
+
+@pytest.fixture(autouse=True)
+def mock_rabbitmq():
+    """Patches RabbitMQ channel so tests don't need a real broker."""
+    mock_channel = MagicMock()
+    mock_channel.default_exchange = MagicMock()
+    mock_channel.default_exchange.publish = AsyncMock()
+    with patch("research.routes.research.get_rmq_channel", return_value=mock_channel):
+        yield mock_channel

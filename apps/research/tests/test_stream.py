@@ -1,6 +1,5 @@
 import json
-from contextlib import ExitStack
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, patch
 
 
 def parse_sse(text: str) -> list[dict]:
@@ -12,168 +11,140 @@ def parse_sse(text: str) -> list[dict]:
     return events
 
 
-def make_patches(graph_events=None):
-    """Return a dict of patches shared across stream tests."""
-    async def _fake_stream(*args, **kwargs):
-        for event in (graph_events or []):
-            yield event
-
-    mock_graph = MagicMock()
-    mock_graph.astream_events = _fake_stream
-
-    return {
-        "research.routes.research._graph": mock_graph,
-        "research.routes.research.create_kb": AsyncMock(return_value={"id": "kb-1"}),
-        "research.routes.research.create_session": AsyncMock(return_value={"id": "sess-1"}),
-        "research.routes.research.update_artifact": AsyncMock(),
-        "research.routes.research.complete_session": AsyncMock(),
-        "research.routes.research.cancel_session": AsyncMock(),
-        "research.routes.research.append_findings": AsyncMock(),
-        "research.routes.research.save_agent": AsyncMock(),
-        "research.routes.research.update_agent_source_count": AsyncMock(),
-    }
+async def _fake_subscribe(redis_url, session_id):
+    """Simulate a worker publishing events via Redis pub/sub."""
+    yield {"type": "orchestrator_phase", "phase": "thinking"}
+    yield {"type": "agent_spawned", "id": 0, "task": "research keyboards", "round": 1}
+    yield {"type": "agent_done", "agentId": 0, "sourceCount": 3}
+    yield {"type": "orchestrator_phase", "phase": "synthesizing"}
+    yield {"type": "artifact_ready", "artifact": "# Report", "durationSec": 5.2, "kbId": "kb-1"}
+    yield {"type": "done"}
 
 
-async def test_stream_emits_initial_events(client, mock_db):
-    patches = make_patches()
-    with patch("research.routes.research._graph", patches["research.routes.research._graph"]), \
-         patch("research.routes.research.create_kb", patches["research.routes.research.create_kb"]), \
-         patch("research.routes.research.create_session", patches["research.routes.research.create_session"]), \
-         patch("research.routes.research.update_artifact", patches["research.routes.research.update_artifact"]), \
-         patch("research.routes.research.complete_session", patches["research.routes.research.complete_session"]), \
-         patch("research.routes.research.cancel_session", patches["research.routes.research.cancel_session"]):
+async def _fake_subscribe_empty(redis_url, session_id):
+    """Simulate a worker that immediately errors."""
+    yield {"type": "error", "message": "something broke"}
+
+
+async def test_stream_emits_kb_and_session_ids(client, mock_db):
+    with patch("research.routes.research.create_kb", AsyncMock(return_value={"id": "kb-1"})), \
+         patch("research.routes.research.create_session", AsyncMock(return_value={"id": "sess-1"})), \
+         patch("research.routes.research.subscribe_events", _fake_subscribe):
         r = await client.get("/research/stream", params={"query": "best keyboards"})
 
     events = parse_sse(r.text)
     types = [e["type"] for e in events]
-    assert types[:3] == ["kb_id", "session_id", "orchestrator_phase"]
+    assert types[0] == "kb_id"
+    assert types[1] == "session_id"
     assert events[0]["id"] == "kb-1"
     assert events[1]["id"] == "sess-1"
-    assert events[2]["phase"] == "thinking"
 
 
-async def test_stream_full_happy_path(client, mock_db):
-    graph_events = [
-        {
-            "event": "on_chain_end",
-            "name": "synthesizer",
-            "run_id": "r1",
-            "data": {"output": {"artifact": "# My Report"}},
-            "parent_ids": [],
-        }
-    ]
-    patches = make_patches(graph_events)
-    with patch("research.routes.research._graph", patches["research.routes.research._graph"]), \
-         patch("research.routes.research.create_kb", patches["research.routes.research.create_kb"]), \
-         patch("research.routes.research.create_session", patches["research.routes.research.create_session"]), \
-         patch("research.routes.research.update_artifact", patches["research.routes.research.update_artifact"]), \
-         patch("research.routes.research.complete_session", patches["research.routes.research.complete_session"]), \
-         patch("research.routes.research.cancel_session", patches["research.routes.research.cancel_session"]):
+async def test_stream_publishes_job_to_rabbitmq(client, mock_db, mock_rabbitmq):
+    with patch("research.routes.research.create_kb", AsyncMock(return_value={"id": "kb-1"})), \
+         patch("research.routes.research.create_session", AsyncMock(return_value={"id": "sess-1"})), \
+         patch("research.routes.research.subscribe_events", _fake_subscribe):
+        await client.get("/research/stream", params={"query": "best keyboards", "fast": "true"})
+
+    mock_rabbitmq.default_exchange.publish.assert_called_once()
+    call_args = mock_rabbitmq.default_exchange.publish.call_args
+    message_body = json.loads(call_args[0][0].body)
+    assert message_body["query"] == "best keyboards"
+    assert message_body["fast"] is True
+    assert message_body["kb_id"] == "kb-1"
+    assert message_body["session_id"] == "sess-1"
+
+
+async def test_stream_relays_worker_events_as_sse(client, mock_db):
+    with patch("research.routes.research.create_kb", AsyncMock(return_value={"id": "kb-1"})), \
+         patch("research.routes.research.create_session", AsyncMock(return_value={"id": "sess-1"})), \
+         patch("research.routes.research.subscribe_events", _fake_subscribe):
         r = await client.get("/research/stream", params={"query": "test"})
 
     events = parse_sse(r.text)
     types = [e["type"] for e in events]
+    # First two are kb_id and session_id from the API itself
+    # The rest come from the worker via Redis pub/sub
+    assert "agent_spawned" in types
+    assert "agent_done" in types
     assert "artifact_ready" in types
     assert "done" in types
-    artifact_event = next(e for e in events if e["type"] == "artifact_ready")
-    assert artifact_event["artifact"] == "# My Report"
-    assert artifact_event["kbId"] == "kb-1"
 
 
-async def test_stream_cancels_session_when_graph_yields_nothing(client, mock_db):
-    patches = make_patches(graph_events=[])
-    cancel_mock = patches["research.routes.research.cancel_session"]
-
-    with patch("research.routes.research._graph", patches["research.routes.research._graph"]), \
-         patch("research.routes.research.create_kb", patches["research.routes.research.create_kb"]), \
-         patch("research.routes.research.create_session", patches["research.routes.research.create_session"]), \
-         patch("research.routes.research.update_artifact", patches["research.routes.research.update_artifact"]), \
-         patch("research.routes.research.complete_session", patches["research.routes.research.complete_session"]), \
-         patch("research.routes.research.cancel_session", cancel_mock):
+async def test_stream_invalidates_cache_on_done(client, mock_db):
+    with patch("research.routes.research.create_kb", AsyncMock(return_value={"id": "kb-1"})), \
+         patch("research.routes.research.create_session", AsyncMock(return_value={"id": "sess-1"})), \
+         patch("research.routes.research.subscribe_events", _fake_subscribe), \
+         patch("research.routes.research.invalidate_kb", new_callable=AsyncMock) as mock_invalidate:
         await client.get("/research/stream", params={"query": "test"})
 
-    cancel_mock.assert_called_once()
+    mock_invalidate.assert_called_once_with("kb-1", "test-user-id")
 
 
-async def test_stream_parses_clarifications(client, mock_db):
-    patches = make_patches()
-    with patch("research.routes.research._graph", patches["research.routes.research._graph"]), \
-         patch("research.routes.research.create_kb", patches["research.routes.research.create_kb"]), \
-         patch("research.routes.research.create_session", patches["research.routes.research.create_session"]), \
-         patch("research.routes.research.update_artifact", patches["research.routes.research.update_artifact"]), \
-         patch("research.routes.research.complete_session", patches["research.routes.research.complete_session"]), \
-         patch("research.routes.research.cancel_session", patches["research.routes.research.cancel_session"]):
-        r = await client.get(
+async def test_stream_handles_worker_error(client, mock_db):
+    with patch("research.routes.research.create_kb", AsyncMock(return_value={"id": "kb-1"})), \
+         patch("research.routes.research.create_session", AsyncMock(return_value={"id": "sess-1"})), \
+         patch("research.routes.research.subscribe_events", _fake_subscribe_empty):
+        r = await client.get("/research/stream", params={"query": "test"})
+
+    events = parse_sse(r.text)
+    error_event = next((e for e in events if e["type"] == "error"), None)
+    assert error_event is not None
+    assert error_event["message"] == "something broke"
+
+
+async def test_stream_parses_clarifications(client, mock_db, mock_rabbitmq):
+    with patch("research.routes.research.create_kb", AsyncMock(return_value={"id": "kb-1"})), \
+         patch("research.routes.research.create_session", AsyncMock(return_value={"id": "sess-1"})), \
+         patch("research.routes.research.subscribe_events", _fake_subscribe):
+        await client.get(
             "/research/stream",
-            params={"query": "test", "clarifications": '["What platform?"]'},
+            params={"query": "test", "clarifications": '[{"question":"Q","answer":"A"}]'},
         )
-    assert r.status_code == 200
+
+    call_args = mock_rabbitmq.default_exchange.publish.call_args
+    message_body = json.loads(call_args[0][0].body)
+    assert message_body["clarifications"] == [{"question": "Q", "answer": "A"}]
 
 
-async def test_stream_ignores_invalid_clarifications(client, mock_db):
-    patches = make_patches()
-    with patch("research.routes.research._graph", patches["research.routes.research._graph"]), \
-         patch("research.routes.research.create_kb", patches["research.routes.research.create_kb"]), \
-         patch("research.routes.research.create_session", patches["research.routes.research.create_session"]), \
-         patch("research.routes.research.update_artifact", patches["research.routes.research.update_artifact"]), \
-         patch("research.routes.research.complete_session", patches["research.routes.research.complete_session"]), \
-         patch("research.routes.research.cancel_session", patches["research.routes.research.cancel_session"]):
-        r = await client.get(
+async def test_stream_ignores_invalid_clarifications(client, mock_db, mock_rabbitmq):
+    with patch("research.routes.research.create_kb", AsyncMock(return_value={"id": "kb-1"})), \
+         patch("research.routes.research.create_session", AsyncMock(return_value={"id": "sess-1"})), \
+         patch("research.routes.research.subscribe_events", _fake_subscribe):
+        await client.get(
             "/research/stream",
             params={"query": "test", "clarifications": "not-valid-json"},
         )
-    assert r.status_code == 200
+
+    call_args = mock_rabbitmq.default_exchange.publish.call_args
+    message_body = json.loads(call_args[0][0].body)
+    assert message_body["clarifications"] is None
 
 
 async def test_stream_follow_up_missing_kb_creates_new(client, mock_db):
-    patches = make_patches()
-    with patch("research.routes.research._graph", patches["research.routes.research._graph"]), \
-         patch("research.routes.research.get_kb", AsyncMock(return_value=None)), \
-         patch("research.routes.research.create_kb", patches["research.routes.research.create_kb"]), \
-         patch("research.routes.research.create_session", patches["research.routes.research.create_session"]), \
-         patch("research.routes.research.update_artifact", patches["research.routes.research.update_artifact"]), \
-         patch("research.routes.research.complete_session", patches["research.routes.research.complete_session"]), \
-         patch("research.routes.research.cancel_session", patches["research.routes.research.cancel_session"]):
+    with patch("research.routes.research.get_kb", AsyncMock(return_value=None)), \
+         patch("research.routes.research.create_kb", AsyncMock(return_value={"id": "kb-new"})), \
+         patch("research.routes.research.create_session", AsyncMock(return_value={"id": "sess-1"})), \
+         patch("research.routes.research.subscribe_events", _fake_subscribe):
         r = await client.get(
             "/research/stream",
             params={"query": "test", "kb_id": "missing-kb", "follow_up": "more detail"},
         )
+
     events = parse_sse(r.text)
     kb_event = next(e for e in events if e["type"] == "kb_id")
-    assert kb_event["id"] == "kb-1"  # new KB was created
-
-
-async def test_stream_refocus_loads_session_findings(client, mock_db):
-    patches = make_patches()
-    get_session_findings_mock = AsyncMock(return_value=[{"topic": "t", "findings": "f", "sources": []}])
-    with patch("research.routes.research._graph", patches["research.routes.research._graph"]), \
-         patch("research.routes.research.create_kb", patches["research.routes.research.create_kb"]), \
-         patch("research.routes.research.create_session", patches["research.routes.research.create_session"]), \
-         patch("research.routes.research.get_session_findings", get_session_findings_mock), \
-         patch("research.routes.research.update_artifact", patches["research.routes.research.update_artifact"]), \
-         patch("research.routes.research.complete_session", patches["research.routes.research.complete_session"]), \
-         patch("research.routes.research.cancel_session", patches["research.routes.research.cancel_session"]):
-        await client.get(
-            "/research/stream",
-            params={"query": "test", "session_id": "sess-old", "refocus": "focus on X"},
-        )
-    get_session_findings_mock.assert_called_once()
+    assert kb_event["id"] == "kb-new"
 
 
 async def test_stream_follow_up_loads_existing_kb(client, mock_db):
     existing_kb = {"id": "kb-existing", "artifact": "# Old Report"}
-    patches = make_patches()
-
-    with patch("research.routes.research._graph", patches["research.routes.research._graph"]), \
-         patch("research.routes.research.get_kb", AsyncMock(return_value=existing_kb)), \
+    with patch("research.routes.research.get_kb", AsyncMock(return_value=existing_kb)), \
          patch("research.routes.research.get_findings", AsyncMock(return_value=[])), \
-         patch("research.routes.research.create_session", patches["research.routes.research.create_session"]), \
-         patch("research.routes.research.update_artifact", patches["research.routes.research.update_artifact"]), \
-         patch("research.routes.research.complete_session", patches["research.routes.research.complete_session"]), \
-         patch("research.routes.research.cancel_session", patches["research.routes.research.cancel_session"]):
+         patch("research.routes.research.create_session", AsyncMock(return_value={"id": "sess-1"})), \
+         patch("research.routes.research.subscribe_events", _fake_subscribe):
         r = await client.get(
             "/research/stream",
-            params={"query": "follow up question", "kb_id": "kb-existing", "follow_up": "more detail"},
+            params={"query": "follow up", "kb_id": "kb-existing", "follow_up": "more detail"},
         )
 
     events = parse_sse(r.text)
@@ -181,119 +152,15 @@ async def test_stream_follow_up_loads_existing_kb(client, mock_db):
     assert kb_event["id"] == "kb-existing"
 
 
-def stream_request(client, patches, **params):
-    """Helper: apply all patches and make a stream GET request."""
-    with ExitStack() as stack:
-        for target, mock in patches.items():
-            stack.enter_context(patch(target, new=mock))
-        import asyncio
-        return asyncio.get_event_loop().run_until_complete(
-            client.get("/research/stream", params={"query": "test", **params})
+async def test_stream_refocus_loads_session_findings(client, mock_db):
+    get_session_findings_mock = AsyncMock(return_value=[{"topic": "t", "findings": "f", "sources": []}])
+    with patch("research.routes.research.create_kb", AsyncMock(return_value={"id": "kb-1"})), \
+         patch("research.routes.research.create_session", AsyncMock(return_value={"id": "sess-1"})), \
+         patch("research.routes.research.get_session_findings", get_session_findings_mock), \
+         patch("research.routes.research.subscribe_events", _fake_subscribe):
+        await client.get(
+            "/research/stream",
+            params={"query": "test", "session_id": "sess-old", "refocus": "focus on X"},
         )
 
-
-async def test_stream_orchestrator_spawning_event(client, mock_db):
-    graph_events = [
-        {"event": "on_chain_end", "name": "orchestrator", "run_id": "r1",
-         "data": {"output": {"tasks": ["task1"]}}, "parent_ids": []},
-    ]
-    patches = make_patches(graph_events)
-    with ExitStack() as stack:
-        for target, mock in patches.items():
-            stack.enter_context(patch(target, new=mock))
-        r = await client.get("/research/stream", params={"query": "test"})
-
-    types = [e["type"] for e in parse_sse(r.text)]
-    assert "orchestrator_phase" in types
-    phases = [e["phase"] for e in parse_sse(r.text) if e["type"] == "orchestrator_phase"]
-    assert "spawning" in phases
-
-
-async def test_stream_agent_spawned_event(client, mock_db):
-    graph_events = [
-        {"event": "on_chain_start", "name": "subagent", "run_id": "agent-run-1",
-         "data": {"input": {"current_task": {"topic": "keyboards"}, "round": 0}}, "parent_ids": []},
-    ]
-    patches = make_patches(graph_events)
-    with ExitStack() as stack:
-        for target, mock in patches.items():
-            stack.enter_context(patch(target, new=mock))
-        r = await client.get("/research/stream", params={"query": "test"})
-
-    events = parse_sse(r.text)
-    spawned = next((e for e in events if e["type"] == "agent_spawned"), None)
-    assert spawned is not None
-    assert spawned["task"] == "keyboards"
-    assert spawned["round"] == 1
-
-
-async def test_stream_tool_call_events(client, mock_db):
-    graph_events = [
-        {"event": "on_chain_start", "name": "subagent", "run_id": "agent-run-1",
-         "data": {"input": {"current_task": {"topic": "t"}, "round": 0}}, "parent_ids": []},
-        {"event": "on_tool_start", "name": "search_reddit", "run_id": "tool-run-1",
-         "data": {"input": {"query": "mechanical keyboards"}}, "parent_ids": ["agent-run-1"]},
-        {"event": "on_tool_end", "name": "search_reddit", "run_id": "tool-run-1",
-         "data": {"output": {}}, "parent_ids": ["agent-run-1"]},
-    ]
-    patches = make_patches(graph_events)
-    with ExitStack() as stack:
-        for target, mock in patches.items():
-            stack.enter_context(patch(target, new=mock))
-        r = await client.get("/research/stream", params={"query": "test"})
-
-    events = parse_sse(r.text)
-    tool_events = [e for e in events if e["type"] == "tool_call"]
-    assert any(e["status"] == "active" for e in tool_events)
-    assert any(e["status"] == "done" for e in tool_events)
-
-
-async def test_stream_agent_done_event(client, mock_db):
-    graph_events = [
-        {"event": "on_chain_start", "name": "subagent", "run_id": "agent-run-1",
-         "data": {"input": {"current_task": {"topic": "t"}, "round": 0}}, "parent_ids": []},
-        {"event": "on_chain_end", "name": "subagent", "run_id": "agent-run-1",
-         "data": {"output": {"results": [{"topic": "t", "findings": "f", "sources": ["url1"]}]}},
-         "parent_ids": []},
-    ]
-    patches = make_patches(graph_events)
-    with ExitStack() as stack:
-        for target, mock in patches.items():
-            stack.enter_context(patch(target, new=mock))
-        r = await client.get("/research/stream", params={"query": "test"})
-
-    events = parse_sse(r.text)
-    done_event = next((e for e in events if e["type"] == "agent_done"), None)
-    assert done_event is not None
-    assert done_event["sourceCount"] == 1
-
-
-async def test_stream_orchestrator_evaluating_event(client, mock_db):
-    graph_events = [
-        {"event": "on_chain_start", "name": "orchestrator", "run_id": "r1",
-         "data": {"input": {"results": [{"topic": "t", "findings": "f", "sources": []}]}},
-         "parent_ids": []},
-    ]
-    patches = make_patches(graph_events)
-    with ExitStack() as stack:
-        for target, mock in patches.items():
-            stack.enter_context(patch(target, new=mock))
-        r = await client.get("/research/stream", params={"query": "test"})
-
-    phases = [e["phase"] for e in parse_sse(r.text) if e["type"] == "orchestrator_phase"]
-    assert "evaluating" in phases
-
-
-async def test_stream_synthesizer_phase_event(client, mock_db):
-    graph_events = [
-        {"event": "on_chain_start", "name": "synthesizer", "run_id": "r1",
-         "data": {}, "parent_ids": []},
-    ]
-    patches = make_patches(graph_events)
-    with ExitStack() as stack:
-        for target, mock in patches.items():
-            stack.enter_context(patch(target, new=mock))
-        r = await client.get("/research/stream", params={"query": "test"})
-
-    phases = [e["phase"] for e in parse_sse(r.text) if e["type"] == "orchestrator_phase"]
-    assert "synthesizing" in phases
+    get_session_findings_mock.assert_called_once()

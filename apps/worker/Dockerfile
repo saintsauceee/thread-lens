@@ -10,16 +10,14 @@ COPY packages/events packages/events
 COPY packages/research-agent packages/research-agent
 COPY packages/mcp-reddit packages/mcp-reddit
 
-# Copy research app
-COPY apps/research apps/research
+# Copy worker app
+COPY apps/worker apps/worker
 
 # Pre-install mcp-reddit deps so uv run doesn't need network at runtime
 RUN cd packages/mcp-reddit && uv sync --no-dev
 
-# Install research app dependencies
-WORKDIR /workspace/apps/research
+# Install worker dependencies
+WORKDIR /workspace/apps/worker
 RUN uv sync --no-dev
 
-EXPOSE 8000
-
-CMD ["uv", "run", "uvicorn", "research.main:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["uv", "run", "python", "-m", "worker.main"]
