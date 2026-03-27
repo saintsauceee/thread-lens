@@ -1,0 +1,22 @@
+# Copy this file to terraform.tfvars and fill in your values.
+# terraform.tfvars is gitignored — never commit real project IDs.
+
+project_id = "your-gcp-project-id"
+region     = "us-central1"
+zone       = "us-central1-a"
+
+environment = "dev"
+
+# GKE — 1 node of e2-medium is enough for dev (~$25/mo)
+gke_num_nodes    = 1
+gke_machine_type = "e2-medium"
+gke_disk_size_gb = 50
+
+# Cloud SQL — db-f1-micro is the smallest tier (~$7/mo)
+cloudsql_tier        = "db-f1-micro"
+cloudsql_disk_size_gb = 10
+cloudsql_db_name     = "thread_lens"
+
+# Memorystore Redis — 1 GB BASIC tier (~$35/mo)
+redis_memory_size_gb = 1
+redis_version        = "REDIS_7_0"

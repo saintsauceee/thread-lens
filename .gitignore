@@ -1,3 +1,10 @@
 __pycache__/
 .env
-k8s/secret.yaml
+infra/k8s/secret.yaml
+
+# Terraform
+infra/gcp/.terraform/
+infra/gcp/*.tfstate
+infra/gcp/*.tfstate.backup
+infra/gcp/.terraform.lock.hcl
+infra/gcp/terraform.tfvars
